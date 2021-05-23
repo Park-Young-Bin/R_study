@@ -1,0 +1,34 @@
+---
+title: "마크다운 연습"
+author: "PYB"
+date: '2020 12 30 '
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 쉽게 배우는 R 데이터 분석
+
+## 쉽게 배우는 R 데이터 분석
+
+### 쉽게 배우는 R 데이터 분석
+
+#### 쉽게 배우는 R 데이터 분석
+
+##### 쉽게 배우는 R 데이터 분석
+
+###### 쉽게 배우는 R 데이터 분석
+
+####### 쉽게 배우는 R 데이터 분석
+
+*쉽게 배우는 R 데이터 분석*
+
+**쉽게 배우는 R 데이터 분석**
+
+~~쉽게 배우는 R 데이터 분석~~
+
+문자 앞뒤에[Do it! 카페](https://cafe.naver.com/doitstudyroom)를 넣으면 하이퍼링크를 만든다.
