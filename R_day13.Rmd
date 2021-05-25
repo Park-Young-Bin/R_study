@@ -1,0 +1,30 @@
+---
+title: "R_13일차"
+author: "PYB"
+date: '2020 12 30 '
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+실습해보자!
+cars 데이터 요약통계치 분석
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+drv 빈도 그래프 작성
+
+```{r pressure, echo=FALSE}
+library(ggplot2)
+qplot(data = mpg, x = drv, fill = drv)
+```
+끝!
