@@ -1,0 +1,32 @@
+---
+title: "Dygraphs_in_htmlwidgets"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+---
+
+```{r setup, include=FALSE}
+library(dygraphs)
+library(flexdashboard)
+```
+
+### Lung Deaths (All)
+'htmlwidgets'의 한 가지 단점은 데이터를 웹 페이지에 직접 포함하므로 더 큰 데이터의 경우 성능 문제가 발생할 수 있음
+
+```{r}
+dygraph(ldeaths)
+```
+
+
+### Lung Deaths (Male)
+
+```{r}
+dygraph(mdeaths)
+```
+
+### Lung Deaths (Female)
+
+```{r}
+dygraph(fdeaths)
+```
+

@@ -1,0 +1,180 @@
+---
+title: "Chart Stack (Scrolling)"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: sandstone # 테마
+    vertical_layout: scroll
+    social: ['twitter', 'facebook', 'menu'] # SNS
+    source_code: embed # 소스코드 임베딩
+    navbar: 
+      - {title: "About", href: "https://example.com/about", align: left} # 네비게이션바
+runtine: shiny
+---
+```{r}
+library(flexdashboard)
+```
+
+
+Page 1
+=========================================
+
+
+### Chart 크기 조절
+**fig.width**와 **fig.height**를 미리 정하면 정해진 크기에 맞게 템플릿 내의 차트 크기가 조절된다.
+
+```{r, fig.width=15, fig.height=7}
+plot(cars)
+```
+
+
+### Chart 2
+
+```{r, fig.width=5, fig.height=5}
+plot(pressure)
+```
+
+### Chart 3
+
+```{r, fig.width=5, fig.height=5}
+plot(airmiles)
+```
+
+
+### Single Table
+
+```{r}
+knitr::kable(mtcars)
+```
+
+### Data Table
+
+```{r}
+DT::datatable(mtcars, option = list(
+  bPaginate = FALSE
+))
+```
+
+### Leaflet Package
+'Leaflet'은 지도 기능을 제공하는 R 패키지이다.
+
+```{r}
+library(leaflet)
+
+m <- leaflet() %>% 
+  addTiles() %>% # add default OpenStreetMap map titles
+  addMarkers(lng = 174.768, lat = 36.852, popup = 'The birthplace of R')
+m
+```
+
+### Plotly
+'Plotly'는 인터랙티브한 차트를 제공하는 R 패키지이다.
+
+```{r}
+library(ggplot2)
+library(plotly)
+
+p <- ggplot(data = diamonds, aes(x = cut, fill = clarity)) +
+  geom_bar(position = 'dodge')
+ggplotly(p)
+```
+
+### Rbokch
+'Rbokch'는 인터랙티브한 차트를 제공하는 R 패키지이다.
+
+```{r}
+library(rbokeh)
+
+p <- figure() %>% 
+  ly_points(Sepal.Length, Sepal.Width, data = iris,
+            color = Species, glyph = Species,
+            hover = list(Sepal.Length, Sepal.Width))
+p
+```
+
+
+### HighChart
+'HighChart' 역시 역동적인 Chart를 제공하는 패키지이다.
+
+```{r}
+library(highcharter)
+data(penguins, package = 'palmerpenguins')
+
+hchart(penguins, "scatter", hcaes(x= flipper_length_mm,
+                                   y = bill_length_mm, group = species))
+```
+
+
+Page 2{data-orientation=row}
+==========================================
+
+
+value박스에는 KPI와 같은 핵심지표를 넣을 수 있다.  
+[Using flexdashboad](https://rstudio.github.io/flexdashboard/articles/using.html)
+
+Row
+------------------------------------------
+
+### Articles per Day
+```{r}
+articles <- 100
+valueBox(articles, icon = 'fa-pencil')
+```
+
+### Comments per Day
+```{r}
+comments <- 200
+valueBox(comments, icon = 'fa-comments')
+```
+
+### Spam per Day
+```{r}
+spam <- 300
+valueBox(spam, 
+         icon = 'fa-trash',
+         color = ifelse(spam > 10, 'warming', 'primary'))
+```
+
+### Articles per Day
+```{r}
+renderValueBox({
+  articles <- 100
+  valueBox(articles,
+           icon = 'fa-pencil',
+           color = ifelse(articles > 100, 'success', 'info'))
+})
+```
+
+Row
+------------------------------------------------
+
+> Gauagechart를 넣을 수 있다.
+
+
+### Contact Rate
+
+
+```{r}
+rate <- 70
+gauge(rate, min = 0, max = 100, symbol = '%', gaugeSectors(
+  success = c(80, 100), warning = c(40, 79), danger = c(0, 39)
+))
+```
+
+### Average Rating
+```{r}
+rating <- 23
+gauge(rating, min = 0, max = 50, gaugeSectors(
+  success = c(41, 50), warning = c(21, 40), danger = c(0, 20)
+))
+```
+
+### Cancellations
+```{r}
+cancellations <- 7
+gauge(cancellations, min = 0, max = 10, gaugeSectors(
+  success = c(0, 2), warning = c(3, 6), danger = c(7, 10)
+))
+```
+
+Page 3
+===================

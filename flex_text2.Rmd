@@ -1,0 +1,63 @@
+---
+title: "Single Column (Fill)"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+### Chart 1
+
+```{r}
+
+```
+
+### Chart 2
+
+```{r}
+
+```
+
+### Chart 3
+
+```{r}
+
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### Chart 4
+
+```{r}
+
+```
+
+### Chart 5
+
+```{r}
+
+```
+
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### Chart 6
+
+```{r}
+
+```
+
+### Chart 7
+
+```{r}
+
+```

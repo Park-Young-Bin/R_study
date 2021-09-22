@@ -1,0 +1,41 @@
+---
+title: "Single Column (Fill)"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+
+### Chapter 1
+
+'###' 을 쓰면 기본적으로 싱글 컬럼의 레이아웃이 출력된다.
+```{r}
+
+```
+
+
+### Chart 2
+
+```{r}
+
+```
+
+
+### Chart 3
+
+```{r}
+
+```
+
+### Chart 4
+
+```{r}
+
+```
+
+### Chart 5
+
+```{r}
+
+```
