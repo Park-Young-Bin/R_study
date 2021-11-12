@@ -1,4 +1,6 @@
 # [공빅데] apply 함수 정리
+# 참고1: https://cafe.naver.com/21pbds
+# 참고2: https://horae.tistory.com/entry/R-%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%98%EB%B0%8D-apply-lapply-sapply-tapply-mapply
 
 # apply----
 x <- matrix(1:20, 4, 5)
@@ -47,3 +49,16 @@ vapply(trees, mean, numeric(1))
 vapply(trees, mean) # 에러
 
 vapply(trees, fivenum, c(Min. = 0, 'lst Qu.' = 0, Median = 0, '3rd Qu.' = 0, Max. = 0))
+
+# tapply----
+# 나무 두께별 성장 평균
+tapply(trees$Girth, trees$Volume, mean)
+
+# 붓꽃 종류별 길이 평균
+tapply(iris$Sepal.Length, iris$Species, mean)
+
+# mapply----
+# mapply: 여러 리스트나 벡터에 함수 사용
+mapply(rep, 1:4, 4:1)
+
+mapply(sum, trees$Girth, trees$Height)
