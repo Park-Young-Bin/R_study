@@ -9,4 +9,26 @@
 datasets::trees
 summary(trees)
 
-# 정규화 하기
+# 정규화 하기----
+# 1. MinMax 함수(사용자 정의) 이용
+
+# 함수 정의
+minmax <- function(x) {
+  return(((x)-min(x))/(max(x)-min(x)))
+}
+
+# apply 함수로 각 열에 대한 MinMax함수 적용
+trees.minmax <- apply(trees, 2, minmax)
+
+# 데이터 분포 확인
+summary(trees.minmax)
+
+# 2. preprocess 함수 사용(데이터 정규화 방법을 기반으로 한 함수)
+install.packages('caret')
+library(caret)
+
+pre_range_trees <- preProcess(trees, method = 'range')
+
+range_trees <- predict(pre_range_trees, trees)
+
+summary(trees.minmax)
