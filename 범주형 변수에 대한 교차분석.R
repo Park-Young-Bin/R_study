@@ -1,4 +1,4 @@
-# 범주형 변수에 대한 기술통계
+# 범주형 변수에 대한 교차분석(카이제곱 검정 및 피셔 )
 # 참고문헌: https://kilhwan.github.io/bizstat-book/ch-categoricalDescStat.html
 
 # devtools::install_github("kilhwan/bizstatp")
