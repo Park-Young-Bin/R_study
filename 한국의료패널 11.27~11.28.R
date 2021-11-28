@@ -1,4 +1,8 @@
 # install.packages('formattable') # 천단위 표시 가능한 패키지
+# install.packages('gmodels')
+# install.packages('VGAM')
+# library(gmodels)
+library(VGAM) # 로지스틱 회귀분석
 library(formattable)
 library(writexl)
 library(dplyr)
@@ -99,6 +103,11 @@ sum(is.na(data)) # 547개(회귀분석시, 제거 필수)
 # 연령별 연간 개인지출의료비 분포 확인(boxplot)
 boxplot(개인지출의료비 ~ 연령대, data)
 boxplot(개인지출의료비 ~ 연령대, data)$stats # 상자그림 통계치 출력
+# 아래쪽 이상치 경계
+# 1사분위수
+# 중앙값
+# 3사분위수
+# 위쪽 이상치 경계
 
 # 각 연령별 연간 개인지출의료비 분포(boxplot)
 boxplot(data[data$연령대 == '미성년', '개인지출의료비'])
@@ -153,3 +162,61 @@ min(data$나이) # 19세
 
 mean(as.matrix(data %>% filter(연령대 == '중년') %>% select(개인지출의료비))) # 중년 평균 753,094원
 mean(as.matrix(data %>% filter(연령대 == '고령') %>% select(개인지출의료비))) # 고령 평균 1,180,780원
+
+# install.packages('gmodels')
+# install.packages('VGAM')
+# library(gmodels)
+library(VGAM) # 로지스틱 회귀분석
+
+table(data$운동능력) # 12,880개
+sum(is.na(data)) # 547(운동능력 -> 533개)
+
+# NA 행 제거
+vglm_data <- na.omit(data) %>% select(-나이)
+
+str(vglm_data)
+
+# 범주형 변수 -> factor형 변환(chr -> factor)
+vglm_data$운동능력 <- factor(vglm_data$운동능력,
+                         levels = c('걷기 지장 없음', '걷기 다소 지장 있음', '종일 누워있음'))
+
+# table(vglm_data$장애여부)
+vglm_data$장애여부 <- factor(vglm_data$장애여부, levels = c('비장애인', '장애인'))
+
+vglm_data$성별 <- factor(vglm_data$성별, levels = c('남', '여'))
+
+vglm_data$연령대 <- factor(vglm_data$연령대, levels = c('미성년', '청년', '중년', '고령'))
+
+table(vglm_data$와병률)
+vglm_data$와병률 <- factor(vglm_data$와병률, levels = c('예', '아니오'))
+
+table(vglm_data$결근결석)
+vglm_data$결근결석 <- factor(vglm_data$결근결석, levels = c('학교/직장 안다님', '예', '아니오'))
+
+table(vglm_data$시력문제)
+vglm_data$시력문제 <- factor(vglm_data$시력문제,
+                         levels = c('문제 없음', '조금 문제 있음', '많이 문제 있음', '전혀 보지 못함'))
+
+vglm_data$청력문제 <- factor(vglm_data$청력문제,
+                         levels = c('문제 없음', '조금 문제 있음', '많이 문제 있음', '전혀 듣지 못함'))
+
+vglm_data$기억력 <- factor(vglm_data$기억력, levels = c('문제 없음', '문제 있음'))
+
+vglm_data$의사결정 <- factor(vglm_data$의사결정,levels = c('문제 없음', '문제 있음'))
+
+vglm_data$`질병/손상 등으로 활동제한` <- factor(vglm_data$`질병/손상 등으로 활동제한`,
+                                     levels = c('문제 없음', '문제 있음'))
+
+str(vglm_data)
+pid.mlogit <- vglm(운동능력 ~., family  = multinomial(), data=vglm_data)
+summary(pid.mlogit)
+
+# install.packages("car")
+# library(car)
+# vif(vglm(운동능력 ~., family = multinomial(), data=vglm_data))
+exp(coef(pid.mlogit))
+
+fitted(pid.mlogit)
+
+#library(nnet)
+#summary(multinom(운동능력 ~., data=vglm_data))
