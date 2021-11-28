@@ -180,7 +180,7 @@ str(vglm_data)
 vglm_data$운동능력 <- factor(vglm_data$운동능력,
                          levels = c('걷기 지장 없음', '걷기 다소 지장 있음', '종일 누워있음'))
 
-# table(vglm_data$장애여부)
+table(vglm_data$장애여부)
 vglm_data$장애여부 <- factor(vglm_data$장애여부, levels = c('비장애인', '장애인'))
 
 vglm_data$성별 <- factor(vglm_data$성별, levels = c('남', '여'))
@@ -213,8 +213,10 @@ summary(pid.mlogit)
 
 # install.packages("car")
 # library(car)
-# vif(vglm(운동능력 ~., family = multinomial(), data=vglm_data))
-exp(coef(pid.mlogit))
+# vif(vglm(운동능력 ~., family = multinomial(), data=vglm_data)) # 다중공선성 확인(범주형으로 안된다면 수치로 변환해서 해보기)
+
+# log(odds)는 해석상의 어려움이 있기 때문에 다항 로지스틱 회귀모형의 양변에 지수함수를 취해 예측변수 한 단위 증가에 따른 odds의 변화 비율을 
+exp(coef(pid.mlogit)) # e^(회귀계수) -> 오즈비 파악 => 
 
 fitted(pid.mlogit)
 
