@@ -487,7 +487,7 @@ ggplot(data = dt_yn, aes(x = reorder(장애여부, median_price), y = median_pri
                                   hjust = .5),
         legend.position = " ")
 
-# 다중 로지스틱 회귀분석----
+# 다항 로지스틱 회귀분석----
 
 table(data$운동능력) # 12,880개
 sum(is.na(data)) # 547(운동능력 -> 533개)
@@ -506,19 +506,23 @@ vglm_data$장애여부 <- factor(vglm_data$장애여부, levels = c('비장애�
 vglm_data$성별 <- factor(vglm_data$성별, levels = c('남', '여'))
 
 vglm_data$연령대 <- factor(vglm_data$연령대, levels = c('미성년', '청년', '중년', '고령'))
+# vglm_data$연령대 <- relevel(vglm_data$연령대, '고령')
 
 # table(vglm_data$와병률)
-vglm_data$와병률 <- factor(vglm_data$와병률, levels = c('예', '아니오'))
+vglm_data$와병률 <- factor(vglm_data$와병률, levels = c('아니오', '예'))
 
 # table(vglm_data$결근결석)
-vglm_data$결근결석 <- factor(vglm_data$결근결석, levels = c('학교/직장 안다님', '예', '아니오'))
+vglm_data$결근결석 <- factor(vglm_data$결근결석, levels = c('학교/직장 안다님', '아니오', '예'))
+# vglm_data$결근결석 <- relevel(vglm_data$결근결석, '아니오')
 
 # table(vglm_data$시력문제)
 vglm_data$시력문제 <- factor(vglm_data$시력문제,
                          levels = c('문제 없음', '조금 문제 있음', '많이 문제 있음', '전혀 보지 못함'))
+# vglm_data$시력문제 <- relevel(vglm_data$시력문제, '전혀 보지 못함')
 
 vglm_data$청력문제 <- factor(vglm_data$청력문제,
                          levels = c('문제 없음', '조금 문제 있음', '많이 문제 있음', '전혀 듣지 못함'))
+# vglm_data$청력문제 <- relevel(vglm_data$청력문제, '전혀 듣지 못함')
 
 vglm_data$기억력 <- factor(vglm_data$기억력, levels = c('문제 없음', '문제 있음'))
 
@@ -530,60 +534,89 @@ vglm_data$`질병/손상 등으로 활동제한` <- factor(vglm_data$`질병/손
 str(vglm_data)
 
 # 회귀분석 실시
-library(car)
+library(car) # 다중공선성
 library(rms)
 library(nnet)
 
 ### vglm 함수 사용
-pid.mlogit <- vglm(운동능력 ~., family  = multinomial(), data=vglm_data) # 모형 생성
-summary(pid.mlogit) # 결과 도출
-data.frame(exp(coef(pid.mlogit))) # 오즈비 확인
-vif(pid.mlogit) # 다중공선성 -> 오류
+# pid.mlogit <- vglm(운동능력 ~., family  = multinomial(), data=vglm_data) # 모형 생성
+# summary(pid.mlogit) # 결과 도출
+# data.frame(exp(coef(pid.mlogit))) # 오즈비 확인
+# vif(pid.mlogit) # 다중공선성 -> 오류
 # anova(pid.mlogit, test="Chisq") # ANOVA(범주 3개) -> 오류 발생
-qchisq(0.95, df= 25722) # 임계치(26096.21)보다 잔차 이탈도(Residual deviance = 6291.386)가 작으므로 모형은 적합하다.
+# qchisq(0.95, df= 25722) # 임계치(26096.21)보다 잔차 이탈도(Residual deviance = 6291.386)가 작으므로 모형은 적합하다.
 
 # install.packages('rms')
 lrm(pid.mlogit)
 
 
 ### multinom 함수 사용
-pid.mlogit1 <- multinom(운동능력 ~., family  = multinomial(), data=vglm_data) # 모형 생성
-summary(pid.mlogit1) # 결과 도출
-data.frame(exp(coef(pid.mlogit1))) # 오즈비 계산
-vif(pid.mlogit1) # 다중공선성 -> NAN 
-anova(pid.mlogit1, test="Chisq") # ANOVA(범주 3개) -> 오류 발생
+# pid.mlogit1 <- multinom(운동능력 ~., family  = multinomial(), data=vglm_data) # 모형 생성
+# summary(pid.mlogit1) # 결과 도출
+# data.frame(exp(coef(pid.mlogit1))) # 오즈비 계산
+# vif(pid.mlogit1) # 다중공선성 -> NAN 
+# anova(pid.mlogit1, test="Chisq") # ANOVA(범주 3개) -> 오류 발생
 
 ### 수치형 변수로 변환
 vglm_data_num <- vglm_data
 
-vglm_data_num$장애여부 <- as.integer(vglm_data_num$장애여부)
-vglm_data_num$개인지출의료비 <- as.integer(vglm_data_num$개인지출의료비)
-vglm_data_num$성별  <- as.integer(vglm_data_num$성별)
-vglm_data_num$운동능력  <- as.factor(vglm_data_num$운동능력)
-vglm_data_num$와병률  <- as.integer(vglm_data_num$와병률)
-vglm_data_num$결근결석  <- as.integer(vglm_data_num$결근결석)
-vglm_data_num$시력문제  <- as.integer(vglm_data_num$시력문제)
-vglm_data_num$청력문제  <- as.integer(vglm_data_num$청력문제 )
-vglm_data_num$기억력  <- as.integer(vglm_data_num$기억력 )
-vglm_data_num$의사결정 <- as.integer(vglm_data_num$의사결정)
-vglm_data_num$장애여부 <- as.integer(vglm_data_num$장애여부)
-vglm_data_num$`질병/손상 등으로 활동제한` <- as.integer(vglm_data_num$장애여부)
-vglm_data_num$연령대 <- as.integer(vglm_data_num$연령대)
-# str(vglm_data_num)
+vglm_data_num$장애여부 <- as.integer(vglm_data_num$장애여부) # 1: 비장애인, 2: 장애인
+vglm_data_num$성별  <- as.integer(vglm_data_num$성별) # 1: 남자, 2: 여자
+vglm_data_num$운동능력  <- as.factor(vglm_data_num$운동능력) 
+vglm_data_num$와병률  <- as.integer(vglm_data_num$와병률) # 1: 아니오, 2: 예
+vglm_data_num$결근결석  <- as.integer(vglm_data_num$결근결석) # 1: 학교/직장 안다님, 2: 아니오, 3: 예
+vglm_data_num$시력문제  <- as.integer(vglm_data_num$시력문제) # 1: 문제없음, 2: 조금 문제 있음, 3: 많이 문제 있음, 4: 전혀 보지 못함
+vglm_data_num$청력문제  <- as.integer(vglm_data_num$청력문제) # 1: 문제없음, 2: 조금 문제 있음, 3: 많이 문제 있음, 4: 전혀 듣지 못함
+vglm_data_num$기억력  <- as.integer(vglm_data_num$기억력) # 1: 문제없음, 2: 문제있음
+vglm_data_num$의사결정 <- as.integer(vglm_data_num$의사결정) # 1: 문제없음, 2: 문제있음
+vglm_data_num$`질병/손상 등으로 활동제한` <- as.integer(vglm_data_num$`질병/손상 등으로 활동제한`)  # 1: 문제없음, 2: 문제있음
+vglm_data_num$연령대 <- as.integer(vglm_data_num$연령대) # 1: 미성년, 2: 청년, 3: 중년, 4: 고령
+str(vglm_data_num)
 
-pid.mlogit2 <- multinom(운동능력 ~., family  = multinomial(), data=vglm_data_num) # 모형 생성
-summary(pid.mlogit2) # 결과 도출
-exp(coef(pid.mlogit2)) # 오즈비 계산
-vif(pid.mlogit2) # 다중공선성 -> NAN
-anova(pid.mlogit1) # ANOVA(범주 3개) -> 오류 발생(argument is of length zero)
+# pid.mlogit2 <- multinom(운동능력 ~., family  = multinomial(), data=vglm_data_num) # 모형 생성
+# summary(pid.mlogit2) # 결과 도출
+# exp(coef(pid.mlogit2)) # 오즈비 계산
+# vif(pid.mlogit2) # 다중공선성 -> NAN
+# anova(pid.mlogit1) # ANOVA(범주 3개) -> 오류 발생(argument is of length zero)
 
 # 변수 중요도(랜덤 포레스트)----
 # install.packages('randomForest')
-library(randomForest)
-vglm_data_pre <- vglm_data
+# library(randomForest)
+# vglm_data_pre <- vglm_data
+# 
+# vglm_data_pre <- dplyr::rename(vglm_data_pre, '질병손상_활동제한' = '질병/손상 등으로 활동제한')
+# write_xlsx(vglm_data_pre, 'C:/python/pydata/운동능력 데이터.xlsx')
+# 
+# m <- randomForest(운동능력 ~., data=vglm_data_pre, importance=TRUE)
+# m$importance
+# order(importance(m)[,MeanDecreaseAccuracy], decreasing=T) 
+# importance(m)
+# varImpPlot(m) # 시각화
 
-vglm_data_pre <- dplyr::rename(vglm_data_pre, '질병손상_활동제한' = '질병/손상 등으로 활동제한')
+### 순서형 로지스틱 회귀분석
+# install.packages('MASS')
+# library(MASS)
+# ologit <- polr(운동능력 ~ ., data = vglm_data, method = c('logistic'))
+# summary(ologit)
+# exp(coef(polr(운동능력 ~ ., data = vglm_data, Hess=TRUE)))
 
-m <- randomForest(운동능력 ~., data=vglm_data_pre, importance=TRUE)
-importance(m)
-varImpPlot(m) # 시각화
+
+# install.packages('oglmx')
+library(oglmx)
+# summary(oglmx(운동능력 ~ ., data=vglm_data, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL))
+# exp(cbind(coef(oglmx(운동능력 ~ ., data=vglm_data, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)), 
+#          confint.default(oglmx(운동능력 ~ ., data=vglm_data, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL))))
+
+# summary(oglmx(운동능력 ~., data = vglm_data_num, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL))
+# exp(coef(oglmx(운동능력 ~., data = vglm_data_num, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)))
+
+dff <- vglm_data_num %>% filter(결근결석 != 1)
+
+model <- oglmx(운동능력 ~., data = dff, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)
+summary(model)
+exp(coef(model))
+# vif(model)
+
+# install.packages('lmtest')
+# library(lmtest)
+# lrtest(model)
