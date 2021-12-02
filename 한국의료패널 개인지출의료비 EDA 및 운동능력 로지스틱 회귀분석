@@ -593,7 +593,7 @@ str(vglm_data_num)
 # importance(m)
 # varImpPlot(m) # 시각화
 
-### 순서형 로지스틱 회귀분석
+# 순서형 로지스틱 회귀분석----
 # install.packages('MASS')
 # library(MASS)
 # ologit <- polr(운동능력 ~ ., data = vglm_data, method = c('logistic'))
@@ -610,13 +610,90 @@ library(oglmx)
 # summary(oglmx(운동능력 ~., data = vglm_data_num, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL))
 # exp(coef(oglmx(운동능력 ~., data = vglm_data_num, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)))
 
-dff <- vglm_data_num %>% filter(결근결석 != 1)
+dff1 <- vglm_data_num %>% filter(결근결석 != 1) # 결근결석 제거
 
-model <- oglmx(운동능력 ~., data = dff, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)
-summary(model)
-exp(coef(model))
-# vif(model)
+model1 <- oglmx(운동능력 ~., data = dff1, link="logit", constantMEAN = FALSE, constantSD = FALSE, delta=0, threshparam = NULL)
+summary(model1)
+exp(coef(model1))
+# vif(model1)
 
 # install.packages('lmtest')
 # library(lmtest)
 # lrtest(model)
+
+
+# 운동능력 응답별 개인지출의료비 그래프----
+## 운동능력에 따른 개인지출의료비 분포(hist)
+# ggplot(vglm_data, aes(x = 개인지출의료비)) + 
+#   geom_histogram()+ 
+#   facet_grid(운동능력 ~.)
+
+## 전체 지출의료비 기준으로 이상치 -> NA 정제
+vglm_data$non_outlier_price <- ifelse(vglm_data$개인지출의료비 < 0 | vglm_data$개인지출의료비 > 2199760, 
+                                      NA, vglm_data$개인지출의료비)
+
+sum(is.na(vglm_data$non_outlier_price)) # 1,157개
+vglm_data %>% filter(운동능력 == '걷기 지장 없음') %>% select(non_outlier_price)
+
+vglm_data %>% 
+  group_by(운동능력) %>% 
+  summarise(median_price = median(개인지출의료비), # 중앙값
+            mean_outlier = mean(개인지출의료비),   # 평균(이상치 포함)
+            mean_non_outlier = mean(non_outlier_price, na.rm = T)) # 평균(이상치 제거)
+
+
+## '걷기 지장 없음' 기준 이상치 제거 전후 평균 비교
+boxplot(vglm_data[vglm_data$운동능력 == '걷기 지장 없음', '개인지출의료비'])$stats
+non <- data.frame(price = vglm_data[vglm_data$운동능력 == '걷기 지장 없음', '개인지출의료비'],
+                  na_outlier = vglm_data[vglm_data$운동능력 == '걷기 지장 없음', '개인지출의료비']) # df 생성
+non$na_outlier <- ifelse(non$na_outlier < 0 | non$na_outlier > 1932990, NA, non$na_outlier) # 이상치 -> NA
+non %>% summarise(mean_price = mean(non$price), # 평균(이상치 포함)
+                  non_outlier_mean = mean(non$na_outlier, na.rm = T)) # 평균(이상치 제거)
+
+## '걷기 다소 지장 있음 이상치 제거 전후 평균 비교
+boxplot(vglm_data[vglm_data$운동능력 == '걷기 다소 지장 있음', '개인지출의료비'])$stats
+sick <- data.frame(price = vglm_data[vglm_data$운동능력 == '걷기 다소 지장 있음', '개인지출의료비'],
+                  na_outlier = vglm_data[vglm_data$운동능력 == '걷기 다소 지장 있음', '개인지출의료비']) # df 생성
+sick$na_outlier <- ifelse(sick$na_outlier < 0 | sick$na_outlier > 3897430, NA, sick$na_outlier) # 이상치 -> NA
+sick %>% summarise(mean_price = mean(sick$price), # 평균(이상치 포함)
+                  non_outlier_mean = mean(sick$na_outlier, na.rm = T)) # 평균(이상치 제거)
+
+## '종일 누워있음' 이상치 제거 전후 평균 비교
+boxplot(vglm_data[vglm_data$운동능력 == '종일 누워있음', '개인지출의료비'])$stats
+very_sick <- data.frame(price = vglm_data[vglm_data$운동능력 == '종일 누워있음', '개인지출의료비'],
+                   na_outlier = vglm_data[vglm_data$운동능력 == '종일 누워있음', '개인지출의료비']) # df 생성
+very_sick$na_outlier <- ifelse(very_sick$na_outlier < 0 | very_sick$na_outlier > 6849450, NA, very_sick$na_outlier) # 이상치 -> NA
+very_sick %>% summarise(mean_price = mean(very_sick$price), # 평균(이상치 포함)
+                   non_outlier_mean = mean(very_sick$na_outlier, na.rm = T)) # 평균(이상치 제거)
+
+## 운동능력에 따른 개인지출의료비(중앙값, 평균_이상치_포함, 평균_이상치_제거)
+excerise_price = data.frame(운동능력 = c('걷기 지장 없음', '걷기 다소 지장 있음', '종일 누워있음'),
+                            중앙값 = c(271700, 767060, 722430),
+                            mean = c(718711.7, 1410560, 2103669),
+                            mean_non_outlier = c(396752.8, 962164.3, 1529078))
+melt_excerise_price <- melt(excerise_price, id.vars = c('운동능력'))
+
+label = c(
+  중앙값 = '중앙값',
+  mean = '평균(이상치 포함)',
+  mean_non_outlier = '평균(이상치 제거)'
+)
+
+ggplot(melt(excerise_price, id.vars = c('운동능력')), aes(x = 운동능력, y = value, fill = 운동능력)) + 
+  geom_col(width = .8) +
+  facet_wrap('variable', labeller = labeller(variable = label)) +
+  theme_bw() +
+  scale_x_discrete(limits = c('걷기 지장 없음', '걷기 다소 지장 있음', '종일 누워있음')) +
+  theme(plot.title = element_text(face='bold',
+                                  size=20,
+                                  hjust = .5),
+        legend.position = " ")+
+  scale_y_continuous(labels = scales::comma) +
+  geom_text(aes(label = paste0(comma(value, format='d'), '원')), vjust=-.4, size = 4) +
+  ggtitle('운동능력에 따른 개인지출의료비') +
+  theme(plot.title = element_text(face='bold',
+                                  size=20,
+                                  hjust = .5),
+        legend.position = " ",
+        axis.text.x = element_text(angle = 12, hjust = 0.5, vjust = .7))+
+  ylab('연간 개인지출의료비(단위: 원)')
