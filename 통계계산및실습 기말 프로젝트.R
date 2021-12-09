@@ -1,4 +1,4 @@
-# 통계계산 및 실습1 기말 프로젝트
+# 통계계산 및 실습2 기말 프로젝트
 
 # 1. 두 집단의 모비율 검정
 n1 <- 1001; n2 <- 1001;
@@ -16,3 +16,10 @@ print(fit.chi <- CrossTable(fit.t, expected = T, chisq = T))
 
 # 3. 상관분석
 cor.test(iris$Sepal.Length, iris$Petal.Length)
+
+# 4. 단순선형회귀분석
+library(ggplot2)
+result <- lm(price ~ carat, data = diamonds)
+plot(diamonds$carat, diamonds$price, main = '회귀결과', xlab = 'carat', ylab = 'price')
+abline(result, col = 'blue', lwd = 3)
+summary(result)
