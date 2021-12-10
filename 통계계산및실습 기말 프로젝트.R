@@ -23,3 +23,9 @@ result <- lm(price ~ carat, data = diamonds)
 plot(diamonds$carat, diamonds$price, main = '회귀결과', xlab = 'carat', ylab = 'price')
 abline(result, col = 'blue', lwd = 3)
 summary(result)
+
+# 5. 일원배치분산분석 + 사후분석
+colnames(iris)
+oneway.test(Petal.Width ~ Species, data = iris)
+TukeyHSD(aov(Petal.Width ~ Species, data = iris))
+plot(TukeyHSD(aov(Petal.Width ~ Species, data = iris)))
