@@ -13,7 +13,7 @@ apply(X=x, MARGIN = 1, FUN = max)
 apply(X=x, MARGIN = 2, FUN = max)
 
 # 배열
-y <- array(1:24, c(4,3,2))
+y <- array(1:24, c(4,3,2)) # 
 y
 
 apply(y, 1, paste, collapse = ",")
