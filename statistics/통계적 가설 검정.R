@@ -577,3 +577,439 @@ summary(Skulls.manova) # H0 기각, 시대에 따라 두개골 측정값에 차�
 summary.aov(Skulls.manova)
 
 detach(Skulls) # 데이터를 R 검색 경로에서 제거
+
+# chi-square test----
+# 독립성 검정: 두 범주형 변수 간의 관련성이 모집단에서 존재하는지 검정
+# 적합성 검정: 범주별 빈도를 바탕으로 모집단에서 기대되는 비율 분포가 존재하는지 검정
+
+# 예제
+# 안전벨트 착용과 승객 안전 간의 관계 파악
+survivors <- matrix(c(1443, 151, 47, 1781, 312, 135), ncol=2)
+dimnames(survivors) <- list(Status=c('minor injury', 'major injury', 'dead'),
+                            Seatbelts =c('With seatbelt', 'Without seatbelt')) # 범주명 지정
+survivors
+addmargins(survivors) # 행, 열의 합을 교차표에 추가
+
+addmargins(survivors, 2)
+
+prop.table(addmargins(survivors, 2), 2) # 열의 합이 100%인 비율 교차표 생성
+
+# 인사이트: 안전벨트 착용은 승객의 안전과 관계가 있다.
+addmargins(prop.table(addmargins(survivors, 2), 2), 1) # 열의 비율이 1인 비율 교차표 생성
+
+windows(width=7.0, height=5.5)
+barplot(survivors, ylim=c(0, 2500), las =1,
+        col=c('yellowgreen', 'lightsalmon', 'orangered'),
+        ylab='Freguency', main='Frequency of Survivors') # 상대적인 비교 어렵
+legend(0.2, 2500, rownames(survivors), 
+       fill=c('yellowgreen', 'lightsalmon', 'orangered'))
+
+survivors.prop <- prop.table(survivors, 2)
+barplot(survivors.prop*100, las =1,
+        col=c('yellowgreen', 'lightsalmon', 'orangered'),
+        ylab='Percent', main='Percent of Survivors') # 퍼센트로 수정한 그래프
+
+# 카이제곱 검정----
+# 기대빈도와 관측빈도의 비교를 통해 계산되는 '카이제곱'을 가설검정을 위한 검정통계량으로 사용
+# 관측빈도: 교차표 상의 실제 빈도
+# 기대빈도: 변수 간 서로 관련성이 없을 때(H0이 사실이라는 가정 下) 기대할 수 있는 예상 빈도
+# (관측빈도-기대빈도)의 차이가 작을수록 H0채택 확률 높음
+# 카이제곱 값이 클수록 H0기각할 가능성 높음
+
+# 1) pchisq()
+pchisq(45.91, df=(3-1)*(2-1), lower.tail = F) # 1.073421e-10 → H0기각
+
+# 2) qchisq()
+qchisq(0.05, df=(3-1)*(2-1), lower.tail = F) # 카이스퀘어 값 = 5.991465 < 45.91 → H0기각
+
+# 독립성 검정----
+# 1) table 형식의 독립성 검정
+
+str(Titanic)
+
+Titanic.margin <- margin.table(Titanic, c(4, 1)) # c(생존여부, 승객구분)
+Titanic.margin
+
+addmargins(Titanic.margin)
+addmargins(Titanic.margin, 2)
+prop.table(addmargins(Titanic.margin, 2), 2)
+addmargins(prop.table(addmargins(Titanic.margin, 2), 2), 1)
+
+chisq.test(Titanic.margin) # H0기각
+
+# 두 변수 간 관련성 강도 파악
+library(vcd)
+assocstats(Titanic.margin) # 값이 클수록 두 변수 간 관련성이 크다는 것을 의미
+
+# 시각화
+# Pearson residuals = 관측빈도 - 기대빈도
+# 파랑: 관측빈도 > 기대빈도
+# 빨강: 관측빈도 < 기대빈도
+# 파랑, 빨강에 가까운 셀들은 H0기각에 크게 기여함
+mosaic(Titanic.margin, 
+       shade=T) # H0을 기각하는데 있어서 어떤 범주쌍이 큰 기여를 하는지 알 수 있음
+
+# 2) data frame 형식의 독립성 검정
+library(MASS)
+str(survey)
+# Flod: 팔짱을 낄 때 어느 손이 위로 가는가
+# 예제: 성별에 따라 팔짱 낄 때 손의 위치에 차이가 있는가?
+
+chisq.test(survey$Fold, survey$Sex) # H0 기각 못함
+
+crsstb <- table(survey$Fold, survey$Sex)
+crsstb
+chisq.test(crsstb) # H0 기각 못함
+
+# 적합성 검정---
+# 관측한 빈도를 토대로 모집단에서의 집단별 비율 분포 검정
+
+# 예제: 세 이동통신사의 올해 시장점유율은 동일한가?
+chisq.test(c(60, 55, 35)) # H0 기각
+
+# 예제: 전문가에 따르면 a, b, c의 시장점유율은 45%, 30%, 25%를 따른다고 주장한다. 이 주장이 옳은가?
+oc <- c(60, 55, 35)
+null.p <- c(0.45, 0.30, 0.25) # 검정 비율을 별도로 지정
+chisq.test(oc, p=null.p) # H0 기각 불가
+
+# 예제: 작년 85명의 사용자 중에 a회사는 45명, b회사 24명, c회사 15명이다. 올해의 조사결과와 작년의 결과가 동일한가? 
+chisq.test(oc, p=c(45, 25, 15)/85) # H0 기각, 작년과 올해의 결과에 차이가 있음
+
+# table 형식의 적합성 검정
+# 예제: 어느 생리학자는 미국 인구분포 상 검은 머리가 25%를 차지하고 갈색 50%, 빨강 10%, 금발 15%를 차지한다고 주장한다.
+# 이 주장이 옳은가? 
+str(HairEyeColor)
+hairs <- margin.table(HairEyeColor, margin=1)
+hairs
+
+chisq.test(hairs, p=c(0.25, .5, .1, .15)) # H0 기각, 생리학자의 주장은 받아들이기 어렵
+
+# data frame 형식의 적합성 검정
+library(MASS)
+str(survey)
+
+smokers <- table(survey$Smoke)
+smokers
+
+# 비흡연자가 70%를 자치하고 나머지 흡연자는 각각 10%씩 비율을 차지한다고 알려져 있다. 옳은 가?
+chisq.test(smokers, p=c(.1, .7, .1, .1)) # H0 기각, 알려진 것과 다름
+
+# Correlation Analysis----
+library(MASS)
+str(cats)
+
+# ex. 고양이 몸무게와 신장 무게의 관계
+plot(cats$Hwt ~ cats$Bwt, 
+     col='forestgreen', pch=19, 
+     xlab='Body Weight (kg)', ylab = 'Heart Weight (g)',
+     main = 'Body Weight and Heart Weight of Cats')
+
+# 상관계수
+# 두 변수 간의 선형관계의 강도 측정
+# 선형변환에 의해 영향을 받지 않음
+
+cor(cats$Hwt, cats$Bwt) # 0.8041274
+with(cats, cor(Bwt, Hwt)) # 같은 결과
+
+?cor
+# use = "everything: 결측값이 포함되면 NA 출력
+# use = "complete.obs": 하나라도 NA가 포함되면 행 자체 삭제 → 데이터 손실 우려
+# use = "pairwise.complete.obs": 분석에 사용한 변수에 대해서만 결측값이 존재할 때 해당 케이스만 제외
+
+# Pearson vs Spearman
+# Pearson 상관계수: 정규성 가정 필요
+# Spearman 상관계수: 정규성 가정을 충족하지 못하는 서열척도의 데이터를 바탕으로 계산됨, 순위 데이터를 바탕으로 계산되기에 이상점에 덜 민감
+# Pearson 상관계수와 Spearman 상관계수가 많이 다르면 Pearson 상관계수에 큰 영향을 미치는 이상점이 데이터에 포함될 가능성 있음 → 이상치 제거 후 Pearson 상관계수 계산 수행
+
+cor.test(cats$Hwt, cats$Bwt) # 두 변수의 유의성 검정에만 사용 가능
+cor.test(cats$Hwt, cats$Bwt, alternative = 'greater', # H0: 모집단에서 상관계수가 0보다 작거나 같다.
+         conf.level = 0.99)
+cor.test(~ Bwt + Hwt, data=cats) # 동일한 결과
+
+cor.test(~ Bwt + Hwt, data=cats, subset=(Sex=="F")) # 암컷 고양이 한정
+
+# 상관계수 행렬 형태
+str(iris)
+cor(iris[-5])
+
+iris.cor <- cor(iris[-5])
+class(iris.cor)
+iris.cor["Petal.Width", 'Petal.Length'] # "Petal.Width", 'Petal.Length' 간의 상관계수
+
+# 2개 이상의 변수 간 상관분석(유의성 검정) 및 상관계수 파악
+library(psych)
+corr.test(iris[-5])
+print(corr.test(iris[-5]), short=F)
+
+str(state.x77)
+cor(state.x77)
+
+pairs.panels(state.x77) # 산점도, 상관관계, 히스토그램 동시 출력
+pairs.panels(state.x77, pch=21, bg='red', hist.col='gold',
+             main='Correlation Plot of US States Data')
+
+# install.packages('corrgram')
+library(corrgram)
+# 왼/아 → 오/위: + 상관관계
+# 왼/위 → 오/아: - 상관관계
+# 채도가 짙을수록 높은 상관관계
+corrgram(state.x77, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel = panel.txt, # pie 너비: 상관 정도
+         order=T, main = 'Corrgram of US States Data')
+
+cols <- colorRampPalette(c('red', 'pink', 'green', 'blue')) # 상관 크기: red < pink < green < blue
+corrgram(state.x77, col.regions = cols, # pie chart 색 지정
+         lower.panel=panel.pie,
+         upper.panel=panel.conf, text.panel = panel.txt,
+         order=F, main = 'Corrgram of US States Data')
+
+# partial correlation analysis(편상관관계)----
+# 편상관계수
+# 두 변수 간의 순수한 상관관계
+# 하나 이상의 다른 변수의 영향을 통제한 상태에서 관심의 대상인 두 변수 간의 선형적 관련성 측정
+# 가짜 상관을 찾아내는 데 활용(연봉과 혈압 ~ 나이)
+## 일반적으로 연봉과 혈압은 양의 상관성, 이유는 두 변수가 제3의 변수인 나이와 관련 있기 때문 → 나이 통제 필요 → 나이의 영향을 일정하게 유지
+## 두 변수 간에 상관이 존재하듯 보이지만 두 변수가 진짜 상관을 갖은 제3의 변수와 상관을 갖기 때문에 발생하는 경우라면 두 변수는 가짜 상관이 발생할 수 있음
+# 숨겨진 관계를 찾는 데 활용(구매필요성과 구매의향 ~ 소득)
+## 변수 ㄱ, ㄴ이 상관을 갖지 않는다면, 제3의 변수 ㄷ이 ㄱ과 양의 상관, ㄴ은 ㄷ와 음의 상관을 갖고 있기 때문일 수 있음, 변수 ㄷ을 통해 양, 음의 상관관계가 상쇄되어 ㄱ, ㄴ 간에 상관이 드러나지 않았을 수 있음
+
+str(mtcars)
+mtcars2 <- mtcars[,  c('mpg', 'cyl', 'hp', 'wt')]
+cor(mtcars2)
+
+# 실린더 개수와 무게의 영향을 통제 후, 연비와 마력의 상관 파악
+# 결과1: mpg와 hp 간의 높은 상관계수는 cyl와 wt의 영향을 받았을 가능성이 있다.
+# 결과2: 순수한 영향력 = -0.2758932
+# install.packages('ggm')
+library(ggm)
+pcor(c(1, 3, 2, 4), # 인덱스 번호, mpg(1), hp(3), 나머지 통제할 변수(cyl_2, wt_4)
+     cov(mtcars2)) # 공분산 행렬
+pcor(c('mpg', 'hp', 'cyl', 'wt'), cov(mtcars2)) # 동일한 결과
+
+# 유의성 검정
+# 결과1: p-value = 0.1400152 → H0 채택
+# 결과2: cyl과 wt를 통제하면 mpg와 hp 간의 순수한 상관관계는 존재하지 않는다.
+# 결과3:두 변수 간의 상관관계(-0.7761684)는 상당 부분 cyl와 wt로 일어났음을 알 수 있다.
+pcor.test(pcor(c(1, 3, 2, 4), cov(mtcars2)),
+               q=2, # 통제할 변수 개수(cyl, wt)
+               n=nrow(mtcars)) # 관측값 개수(표본 크기)
+
+# 편상관계수와 이에 대한 유의성 검정
+# 각 변수쌍 간에 편상관계수를 산출할 때 나머지 변수는 통제 변수로 작용
+# install.packages('ppcor')
+library(ppcor)
+pcor(mtcars2) # 모든 변수쌍 간의 편상관계수와 유의확률 추출
+
+# 특정 두 변수만의 편상관계수와 유의확률 산출
+pcor.test(mtcars2['mpg'], mtcars2['hp'], mtcars2[c('cyl', 'wt')])
+
+# 단순 회귀 분석----
+# 참고: https://www.youtube.com/watch?v=8opxpVeWmGY&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=22
+# 절편: 독립변수의 값이 0이라는 것이 의미있는 숫자가 아닌 한, 절편이 갖는 의미는 제한적이다.
+library(car)
+str(Prestige)
+head(Prestige)
+
+Prestige.lm <- lm(income ~ education, data=Prestige)
+class(Prestige.lm)
+Prestige.lm
+
+# 교육기간의 최소가 6이므로 독립변수의 값이 0일 때, 소득이 -2853.6이라는 것은 문제가 있음
+plot(Prestige$income ~ Prestige$education,
+     col='cornflowerblue', pch=19,
+     xlab='Education (years)', ylab='Income (dollars)',
+     main='Education and Income') # 산점도
+abline(Prestige.lm, col = 'salmon', lwd=2) # 회귀식
+
+summary(Prestige.lm)
+# Residuals: 일반적으로 정규분포(평균=0)를 따름, 중위수가 음수이므로 오른쪽으로 꼬리가 긴 분포
+# Residual standard error: 회귀선을 중심으로 상하로 변동하는 관측값의 표준 변동성, 작을수록 모델 적합도 좋음
+# F-statistic: 회귀계수가 모두 0이라는 유의성 검정
+# 단순회귀분석은 독립변수가 1개 이므로 '회귀계수의 유의성 검정'과 '회귀식의 유의성 검정'이 같다.
+
+# 가정(선형성, 등분산성, 정규성, 이상치 파악)
+# 참고1: https://wikidocs.net/34027
+# 참고2: https://muzukphysics.tistory.com/entry/%ED%86%B5%EA%B3%84-%EB%B6%84%EC%84%9D-7-%ED%9A%8C%EA%B7%80%EB%AA%A8%EB%8D%B8-%EC%A0%81%ED%95%A9%EB%8F%84-%ED%8F%89%EA%B0%80-%EB%B0%A9%EB%B2%95-with-R-%EC%9E%94%EC%B0%A8-%EA%B2%B0%EC%A0%95%EA%B3%84%EC%88%98-F-T
+par(mfrow = c(2,2))
+plot(Prestige.lm)
+par(mfrow = c(1,1))
+
+# + 잔차 정규성 검정
+res <-  residuals(Prestige.lm)
+shapiro.test(res) # p-value = 1.281e-08, H0기각, 정규성 만족하지 않음
+
+# + 잔차 독립성 검정
+# install.packages('lmtest')
+library(lmtest)
+dwtest(Prestige.lm) # p-value = 0.00818, H0기각, 독립성 만족하지 않음
+
+coef(summary(Prestige.lm)) # 회귀계수 유의성
+anova(Prestige.lm) # 회귀식 유의성
+coef(Prestige.lm) # 회귀계수
+confint(Prestige.lm) # 회귀계수 신뢰구간
+confint(Prestige.lm, level = .99)
+fitted(Prestige.lm)[1:3] # 회귀식에 의한 예측값 산출
+resid(Prestige.lm)[1:3] # 관측값과 예측값 간의 잔차 출력
+Prestige$income[1:3] # fitted()의 결과와 비교, 이 둘의 차이는 resid()
+
+# 예측하기
+Prestige.new <- data.frame(education=c(5, 10, 15))
+predict(Prestige.lm, newdata = Prestige.new) # 교육기간이 5년, 10년, 15년일 때 예측
+predict(Prestige.lm, newdata = Prestige.new, interval = 'confidence') # 예측값에 대한 95% 신뢰구간
+
+# 조건을 적용해 두 집단 간 회귀분석 결과 비교
+# 결과1: 평균보다 많은 교육을 받은 집단은 교육 기간 1년 당 소득은 1455달러가 증가한다.
+# 결과2: 두 집단에 따라 1년 교육기간이 소득에 미치는 영향이 크다.
+mean(Prestige$education)
+
+lm(income ~ education, data=Prestige,
+   subset=(education > mean(Prestige$education))) # 교육기간이 평균보다 큰 집단에 대해서만 회귀분석
+
+lm(income ~ education, data=Prestige,
+   subset=(education <= mean(Prestige$education)))
+
+# 다항회귀분석----
+# 참고: https://www.youtube.com/watch?v=53N4NQ1bgCA&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=23
+# 한 개의 연속형 독립변수를 이용해 한 개의 연속형 종속변수 예측
+# 단순회귀분석과 달리 선형관계는 독립변수의 n차 다항식으로 모델링
+# 관측값을 통과하는 추세선을 그렸을 때, <n-1>개의 굴절이 관찰되면 일반적으로 n차 다항식으로 모델링
+# 일반적으로 3차항을 초과하는 다항회귀모델은 흔하지 않음
+
+# ex. 교육기간과 소득 간 관계 파악
+
+library(car)
+str(Prestige)
+
+Prestige.lm <- lm(income ~ education, data=Prestige)
+summary(Prestige.lm)
+
+# 교육기간에 따라 소득 증가 폭이 다르다. → 다른 회귀선 고려
+plot(Prestige$income ~ Prestige$education,
+     col='cornflowerblue', pch=19,
+     xlab='Education (years)', ylab='Income (dollars)',
+     main='Education and Income') # 산점도
+abline(Prestige.lm, col = 'salmon', lwd=2) # 회귀식
+
+# 조건을 적용해 두 집단 간 회귀분석 결과 비교
+# 결과1: 평균보다 많은 교육을 받은 집단은 교육 기간 1년 당 소득은 1455달러 증가한다.
+# 결과2: 평균보다 적은 교육을 받은 집단은 교육 기간 1년 당 소득이 281.8달러 증가한다.
+# 결과3: 두 집단에 있어서 회귀선의 기울기가 다른 것은 단일 직선의 회귀선보다 한 개의 굴절은 갖는 곡선이 보다 모형을 잘 설명할 수 있을 것이라 유추
+lm(income ~ education, data=Prestige,
+   subset=(education > mean(Prestige$education))) # 교육기간이 평균보다 긴 집단에 대해서만 회귀분석
+
+lm(income ~ education, data=Prestige,
+   subset=(education <= mean(Prestige$education))) # 교육기간이 평균보다 짧은 집단에 대해서만 회귀분석
+
+# 개별 데이터에 충실한 곡선의 loess 추세선이 현재 데이터셋을 보다 잘 설명함
+scatterplot(income ~ education, data=Prestige,
+            pch=19, col='orangered', cex=1.2,
+            regLine=list(method=lm, # lm: 선형 회귀선 생성
+                         lty=2, lwd=3, col='royalblue'), # regLine: 산점도 사이를 지나갈 직선
+            smooth=list(smoother=loessLine, # loessLine: 데이터 구간별로 가장 적합한 추세선 적용
+                        spread=F, # F: loess 추세선 양쪽에 나타나는 변동성을 보여주는 선 제외
+                        lty.smooth=1, lwd.smooth=3, col.smooth='green3'), # smooth: 곡선으로 표현할 추세선
+            xlab='Education (years)', ylab='Income (dollars)',
+            main='Education and Income')
+
+# 다항 vs 단순 비교
+# 결과1: Residual standard error, R-squared 측면에서 다항회귀모델이 단순회귀모델보다 우수함
+# 결과2: 다항회귀모델에서 이차항(education^2)이 단일항보다 유의한데, 이는 두 독립변수 간에 강한 상관간계가 이유이다. 
+# + 독립변수 간에 상관이 크다면 종속변수와 강한 선형 관계를 갖는 독립변수로 인해 다른 독립변수가 통계적 유의성이 드러나지 않을 수 있음 → 다중공선성
+# + 이차항은 원래 변수를 기준으로 계산되에 다항회귀분석은 다중공선성이 발생할 가능성이 높음. 
+# + 하지만 회귀식 자체가 통계적으로 유의하기 때문에 예측이 큰 목적이라면 큰 문제 없음
+Prestige.ploy <- lm(income ~ education + I(education^2), data=Prestige) # 다항
+summary(Prestige.ploy)
+
+Prestige.lm <- lm(income ~ education, data=Prestige) # 단순
+summary(Prestige.lm)
+
+plot(Prestige$income ~ Prestige$education,
+     col='darkorange', pch=19,
+     xlab='Education (years)', ylab='Income (dollars)',
+     main='Education and Income') # 산점도
+library(dplyr)
+lines(arrange(data.frame(Prestige$education, fitted(Prestige.ploy)), # data.frame(x축, y축)
+      Prestige$education), col='cornflowerblue', lwd=2) # education 기준으로 오름차순 정렬
+
+# ex2. 분출 대기 시간과 분출 지속시간 간의 관계
+str(faithful)
+scatterplot(eruptions ~ waiting, data=faithful,
+            pch=19, col='deepskyblue', cex=1.2,
+            regLine=list(method=lm, lty=2, lwd=3, col='blueviolet'),
+            smooth=list(smoother=loessLine, spread=F,
+                        lty.smooth=1, lwd.smooth=3, col.smooth='coral'),
+            xlab='Waiting (minutes)', ylab='Eruptions (minutes)',
+            main='Waiting Time Between and the Duration of the Eruptions') # 2굴절 → 3차 다항식
+
+faithful.ploy <- lm(eruptions ~ waiting + I(waiting^2) + I(waiting^3), 
+                    data=faithful) # 다항
+summary(faithful.ploy)
+
+# 단순회귀모델과 비교
+# 결과1: Residual standard error, R-squared 측면에서 다항회귀모델이 단순회귀모델보다 우수함
+# 결과2: 3차항을 포함한 모델이 두 변수 간의 관계를 설명하는데 있어서 높은 적합도를 보임
+faithful.lm <- lm(eruptions ~ waiting, data=faithful) # 단순
+summary(faithful.lm)
+
+# 다중회귀분석----
+str(mtcars)
+mtcars <- mtcars[c('mpg','hp', 'wt', 'disp', 'drat')]
+head(mtcars)
+
+summary(mtcars)
+cor(mtcars)
+
+library(car)
+scatterplotMatrix(mtcars, pch=19, col='royalblue', cex=1.2,
+                  regLing=list(method=lm, lty=1, lwd=3, col='salmon'),
+                  smooth=list(smoother=loessLine, spread=F,
+                              lty.smooth=1, lwd.smooth=3, col.smooth='forestgreen'),
+                  main='Car Performance')
+
+mtcars.lm <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
+summary(mtcars.lm)
+
+# 표준화계수 구하기(1)
+# 결과: 가장 크게 연비에 미치는 변수는 'wt', 가장 작은 영향력은 'disp'
+mtcars.lm <- lm(scale(mpg) ~ scale(hp) + scale(wt) + scale(disp) + scale(drat), data=mtcars)
+summary(mtcars.lm)
+
+# 표준화계수 구하기(2)
+# devtools::install_github("cran/QuantPsyc")
+library(QuantPsyc)
+mtcars.lm <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
+lm.beta(mtcars.lm)
+
+# 회귀분석 가정----
+# 참고: https://www.youtube.com/watch?v=sbnq3xTC1Uk&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=25
+# 선형성: 종속변수와 독립변수 간의 관계는 선형이다.
+# 정규성: 독립변수값에 대해 대응되는 종속변수 값들의 분포는 정규분포이다.
+# 등분산성: 독립변수값에 대해 대응되는 종속변수 값들의 분포는 모두 동일한 분산을 갖는다.
+# 독립성: 모든 관측값은 서로 독립이다. 하나의 관측값은 다른 관측값에 영향을 주지 않는다.
+
+str(mtcars)
+mtcars.lm <- lm(mpg ~ hp + wt + disp ~ drat, data = mtcars)
+plot(mtcars.lm)
+# 선형성: 어떠한 패턴이 보이므로 선형성 만족 부족
+# 독립성: 일부 점들이 대각선을 벗어나므로 독립성 만족 부족
+# 등분산성: 수평 추세선이 관측되므로 등분산성 만족
+# 이상점/영향력: 
+
+library(car)
+vif(mtcars.lm) # 10 초과하는 값 없음
+
+# 회귀모델 수정
+# 관측값 제거, 변수 변환, 변수 추가/제거를 통해 회귀모델 수정
+# 이상점/영향점 → 관측값 제거
+# 선형성, 정규성, 등분산성 가정 미충족 → 변수 변환
+## 선형성의 가정을 위배하면 독립변수를 변환
+## 정규성/등분산의 가정을 위배하면 종속변수를 변환
+# 다중공선성 → 변수 제거
+
+powerTransform(mtcars$mpg)
+summary(powerTransform(mtcars$mpg)) # p-value = 0.07307 이므로 람다 변환 필요 없음
+
+# 선형성을 계산하기 위한 독립변수의 람다 추정
+boxTidwell(mpg ~ hp + wt, data=mtcars) # hp: -0.568, wt: -0.417 → 모두 -0.5에 근접하기에 hp의 -0.568승과 wt의 -0.417승으로 제곱할 수 있다.
+
+spreadLevelPlot(lm(mpg ~ hp + wt, data=mtcars)) # 잔차와 예측값 간의 관계

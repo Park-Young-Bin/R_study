@@ -26,7 +26,7 @@ with(cats, cor(Bwt, Hwt)) # 같은 결과
 # Pearson 상관계수와 Spearman 상관계수가 많이 다르면 Pearson 상관계수에 큰 영향을 미치는 이상점이 데이터에 포함될 가능성 있음 → 이상치 제거 후 Pearson 상관계수 계산 수행
 
 cor.test(cats$Hwt, cats$Bwt) # 두 변수의 유의성 검정에만 사용 가능
-cor.test(cats$Hwt, cats$Bwt, alternative = 'greater', # H0: 모집단에서 상관계수가 0보다 작거나 같다.
+cor.test(cats$Hwt, cats$Bwt, alternative = 'greater', # H1: 모집단에서 상관계수가 0보다 크다.
          conf.level = 0.99)
 cor.test(~ Bwt + Hwt, data=cats) # 동일한 결과
 
@@ -57,6 +57,7 @@ library(corrgram)
 # 왼/아 → 오/위: + 상관관계
 # 왼/위 → 오/아: - 상관관계
 # 채도가 짙을수록 높은 상관관계
+corrgram(state.x77)
 corrgram(state.x77, lower.panel=panel.shade,
          upper.panel=panel.pie, text.panel = panel.txt, # pie 너비: 상관 정도
          order=T, main = 'Corrgram of US States Data')
@@ -86,7 +87,7 @@ cor(mtcars2)
 # 결과2: 순수한 영향력 = -0.2758932
 # install.packages('ggm')
 library(ggm)
-pcor(c(1, 3, 2, 4), # 인덱스 번호, mpg(1), hp(3), 나머지 통제할 변수(cyl_2, wt_4)
+pcor(c(1, 3, 2, 4), # 인덱스 번호, mpg(1), hp(3), 나머지 통제할 변수(cyl(2), wt(4))
      cov(mtcars2)) # 공분산 행렬
 pcor(c('mpg', 'hp', 'cyl', 'wt'), cov(mtcars2)) # 동일한 결과
 
