@@ -961,8 +961,8 @@ cor(mtcars)
 
 library(car)
 scatterplotMatrix(mtcars, pch=19, col='royalblue', cex=1.2,
-                  regLing=list(method=lm, lty=1, lwd=3, col='salmon'),
-                  smooth=list(smoother=loessLine, spread=F,
+                  regLing=list(method=lm, lty=1, lwd=3, col='salmon'), # regLine: 산점도 사이를 지나갈 직선
+                  smooth=list(smoother=loessLine, spread=F,  # loessLine: 데이터 구간별로 가장 적합한 추세선 적용
                               lty.smooth=1, lwd.smooth=3, col.smooth='forestgreen'),
                   main='Car Performance')
 
@@ -998,18 +998,156 @@ plot(mtcars.lm)
 library(car)
 vif(mtcars.lm) # 10 초과하는 값 없음
 
-# 회귀모델 수정
+# 회귀모델 진단 결과로 회귀분석의 가정이 심각하게 위배되었을 경우, 회귀모델 수정
 # 관측값 제거, 변수 변환, 변수 추가/제거를 통해 회귀모델 수정
 # 이상점/영향점 → 관측값 제거
 # 선형성, 정규성, 등분산성 가정 미충족 → 변수 변환
 ## 선형성의 가정을 위배하면 독립변수를 변환
 ## 정규성/등분산의 가정을 위배하면 종속변수를 변환
-# 다중공선성 → 변수 제거
+# 다중공선성 → 변수 제거(주 목적이 예측을 위한 것이면 큰 신경X, 개별 예측 변수에 대한 통계적 해석이 목적이면 해결해야 함)
 
-powerTransform(mtcars$mpg)
-summary(powerTransform(mtcars$mpg)) # p-value = 0.07307 이므로 람다 변환 필요 없음
+# mpg의 정규화를 위한 종속변수의 람다 추정
+# powerTransform(): x^(람다)를 최대한 정규분포에 가깝도록 만드는 람다 추정
+powerTransform(mtcars$mpg) # mpg^(0.02956537)으로 정규화 가능 → 0에 근접한 값이므로 로그 변환(ln)
+
+# lambda=1 가설 검정: x^(1)을 의미하며 변환하지 않음 의미
+# 변환의 필요성 검정
+summary(powerTransform(mtcars$mpg)) # p-value = 0.07307 이므로 H0채택, 람다 변환 필요 없음
 
 # 선형성을 계산하기 위한 독립변수의 람다 추정
-boxTidwell(mpg ~ hp + wt, data=mtcars) # hp: -0.568, wt: -0.417 → 모두 -0.5에 근접하기에 hp의 -0.568승과 wt의 -0.417승으로 제곱할 수 있다.
+# 결과1: 두 독립변수의 p-value 모두 0.05 이하이므로 변환 가능
+# 결과2: hp:(-0.568), wt(-0.417) → 모두 -0.5에 근접하기에 hp^(-0.5)과 wt^(-0.5)으로 변환 가능
+boxTidwell(mpg ~ hp + wt, data=mtcars) 
 
-spreadLevelPlot(lm(mpg ~ hp + wt, data=mtcars)) # 잔차와 예측값 간의 관계
+# 등분산성을 계산하기 위한 종속변수의 람다 추정
+# 결과: 람다가 0.5853955으로 추정되었으므로 mpg^(0.5)으로 대체하여 회귀모델의 등분산성 만족 가능
+spreadLevelPlot(lm(mpg ~ hp + wt, data=mtcars)) # 잔차와 예측값 간의 관계의 그래프와 등분산성을 계산하기 위한 람다 산출
+
+# 회귀모델 선택(예측정확도, 간명도)----
+# 참고: https://www.youtube.com/watch?v=sm9hBlfP0nA&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=26
+str(mtcars)
+
+mtcars.lm1 <- lm(mpg ~ hp + wt, data=mtcars)
+mtcars.lm2 <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
+
+# 중첩된 모델 간 적합도 비교
+# 추가로 투입된 disp와 drat 변수가 기존의 hp와 wt 변수 이상의 추가적인 설명력을 제공하는지 검정
+# H0: 두 개의 변수로 인해 증가하는 R^2값이 0이다.
+# 결과1: p-value=0.4178이므로 추가 변수들(disp, drat)은 회귀모델 예측력 향상에 기여하지 못함
+# 결과2: hp와 wt만으로 생성된 간명한 회귀모델을 사용하는 것이 바람직함
+anova(mtcars.lm1, mtcars.lm2)
+
+# AIC를 이용한 모델 간 비교
+# 모델의 예측 정확도와 간명도를 함께 고려, AIC 값이 작을수록 우수한 모델
+# 결과: mtcars.lm1의 AIC 값이 더 작으므로 mtcars.lm2보다 우수한 모델
+AIC(mtcars.lm1, mtcars.lm2) 
+
+# 변수 선택
+# 전진선택법: 상수항만을 모델부터 시작해 단계별로 한 번에 한 개씩 독립변수를 모델에 포함
+# 후진선택법: 모든 독립변수가 포함된 모델부터 시작하여 단계별로 한 번에 한 개씩 독립변수를 모델에 제거
+# 단계선택법: 새로 진입되거나 제거되는 변수가 더 이상 존재하지 않은 때까지 진입/제거 과정 반복
+
+?step
+mtcars.lm <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
+step(mtcars.lm, direction = 'backward')
+
+# 가능한 모든 모델을 탐색하고 각 모델의 적합도 평가
+# 가능한 모든 모델이 탐색되고 평가되지 않기 때문에 위의 변수 선택 방법은 최적 회귀모델을 보장하지 않음
+# 결과: adjR^2 관점에서 가장 적합한 모델은 hp, wt, drat가 포함된 모델(맨위 그래프)이다.
+library(leaps)
+mtcars.regsubsets <- regsubsets(x=mpg ~ hp + wt + disp + drat, data=mtcars,
+           nbest=4) # 독립변수의 각 subset 크기별로 탐색할 모델 개수 선정
+
+library(RColorBrewer)
+?RColorBrewer
+plot(mtcars.regsubsets, scale='adjr2',
+     col=brewer.pal(9, 'Pastel1'),
+     main='All Subsets Regression')
+
+str(summary(mtcars.regsubsets)) # 여러 적합도 지표 확인
+
+# 추정된 모든 회귀모델의 adjR^2 추출
+summary(mtcars.regsubsets)$adjr2
+which.max(summary(mtcars.regsubsets)$adjr2) # 가장 큰 adjR^2의 회귀모델 순서 출력, 9번째
+coef(mtcars.regsubsets, 9) # 가장 적합한 모델(9번째 회귀모델)의 변수의 회귀계수 추출
+
+# 더미변수 회귀분석----
+# 기준범주: 더미변수의 값이 모두 0인 범주
+
+str(InsectSprays)
+levels(InsectSprays$spray)
+
+
+tapply(InsectSprays$count, InsectSprays$spray, mean)
+
+# 결론 A와 C, D, E는 통계적으로 유의한 차이가 있음
+sprays.lm <- lm(count ~ spray, data = InsectSprays)
+summary(sprays.lm)
+
+contrasts(InsectSprays$spray) # 더미변수 코딩 구조 확인
+
+# 살충제 간에 효과 차이 검정(분산분석, 사후 검정)
+sprays.aov <- aov(count ~ spray, data=InsectSprays)
+summary(sprays.aov)
+TukeyHSD(sprays.aov)
+
+# 기준범주 변경
+respray <- relevel(InsectSprays$spray, re=6) # 살충제 F를 기준 범주로 저장
+contrasts(respray)
+
+sprays.lm <- lm(count ~ respray, data = InsectSprays)
+summary(sprays.lm)
+
+# 매개효과분석----
+# 참고: https://www.youtube.com/watch?v=2PamBrMhJ1Y&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=28
+str(mtcars)
+
+# 1단계: 종속 ~ 독립
+model.total <- lm(mpg ~ disp, data=mtcars)
+summary(model.total)
+
+# 2단계: 매개 ~ 독립
+model.M <- lm(wt ~ disp, data=mtcars)
+summary(model.M)
+
+# 3단계: 종속 ~ 독립(통제) + 매개
+# 결과1: mpg와 disp간에 직접 효과는 모집단에서 존재하지 않음
+# 결과2: mpg와 disp간에 관계는 통제적으로 유의했지만(1단계에서 총효과 존재), 3단계에서는 wt 투입으로 인해  mpg와 disp간에 직접 효과가 사라짐 
+# 결과3: 따라서 wt는 disp와 mpg 간의 관계를 완전매개한다고 볼 수 있음
+model.Y <- lm(mpg ~ disp + wt, data=mtcars)
+summary(model.Y)
+
+# disp와 mpg 간의 간접효과 계산
+# 간접효과 = 독립변수와 매개변수의 회귀계수(2단계)와 매개변수와 종속변수의 회귀계수(3단계)의 곱
+0.007 * (-3.351)
+
+# 간접효과의 통계적 유의성 검정
+# 소벨 검정: 매개변수가 존재할 때 독립변수가 종속변수에 미치는 영향이 통계적으로 유의하게 감소하는지 검정 
+install.packages('multilevel')
+library(multilevel)
+model.sobel <- sobel(pred=mtcars$disp, med=mtcars$wt, out=mtcars$mpg)
+model.sobel
+
+pnorm(abs(model.sobel$z.value), lower.tail=F) # 오른쪽 꼬리부분 면적
+pnorm(abs(model.sobel$z.value), lower.tail=F)*2 # 왼쪽 꼬리부분 면적 + 오른쪽 꼬리부분 면적, 0.05보다 작기에 매개효과가 존재함
+
+install.packages('bda')
+library(bda)
+mediation.test(mv=mtcars$wt, iv=mtcars$disp, dv=mtcars$mpg)
+
+# 부스팅트랩에 의한 매개효과 분석
+install.packages('mediation')
+library(mediation)
+
+model.M <- lm(wt ~ disp, data=mtcars)
+model.Y <- lm(mpg ~ disp + wt, data=mtcars)
+set.seed(123)
+model.mediation <- mediate(model.m=model.M,
+                           model.y=model.Y,
+                           treat='disp',
+                           mediator='wt',
+                           boot=T, sims=500)
+summary(model.mediation)
+
+plot(model.mediation, cex=1.2, col='royalblue', lwd=2,
+     main='Mediation Effect Analysis')
