@@ -1027,6 +1027,8 @@ spreadLevelPlot(lm(mpg ~ hp + wt, data=mtcars)) # 잔차와 예측값 간의 관
 # 참고: https://www.youtube.com/watch?v=sm9hBlfP0nA&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=26
 str(mtcars)
 
+# 중첩모델 생성
+# 독립변수 관점에서 한 모델이 다른 모델의 완전한 부분집합인 형태의 모델
 mtcars.lm1 <- lm(mpg ~ hp + wt, data=mtcars)
 mtcars.lm2 <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
 
@@ -1073,10 +1075,8 @@ coef(mtcars.regsubsets, 9) # 가장 적합한 모델(9번째 회귀모델)의 �
 
 # 더미변수 회귀분석----
 # 기준범주: 더미변수의 값이 모두 0인 범주
-
 str(InsectSprays)
 levels(InsectSprays$spray)
-
 
 tapply(InsectSprays$count, InsectSprays$spray, mean)
 
@@ -1121,9 +1121,9 @@ summary(model.Y)
 # 간접효과 = 독립변수와 매개변수의 회귀계수(2단계)와 매개변수와 종속변수의 회귀계수(3단계)의 곱
 0.007 * (-3.351)
 
-# 간접효과의 통계적 유의성 검정
+# 간접효과의 통계적 유의성 검정1
 # 소벨 검정: 매개변수가 존재할 때 독립변수가 종속변수에 미치는 영향이 통계적으로 유의하게 감소하는지 검정 
-install.packages('multilevel')
+# install.packages('multilevel')
 library(multilevel)
 model.sobel <- sobel(pred=mtcars$disp, med=mtcars$wt, out=mtcars$mpg)
 model.sobel
@@ -1131,23 +1131,113 @@ model.sobel
 pnorm(abs(model.sobel$z.value), lower.tail=F) # 오른쪽 꼬리부분 면적
 pnorm(abs(model.sobel$z.value), lower.tail=F)*2 # 왼쪽 꼬리부분 면적 + 오른쪽 꼬리부분 면적, 0.05보다 작기에 매개효과가 존재함
 
-install.packages('bda')
+# 간접효과의 통계적 유의성 검정2
+# install.packages('bda')
 library(bda)
-mediation.test(mv=mtcars$wt, iv=mtcars$disp, dv=mtcars$mpg)
+mediation.test(mv=mtcars$wt, iv=mtcars$disp, dv=mtcars$mpg) # p-value=0.00548이므로 disp과 mpg간의 관계는 wt에 의해서 유의하게 매개됨
 
-# 부스팅트랩에 의한 매개효과 분석
-install.packages('mediation')
+# bootsprapping에 의한 매개효과 분석
+# 소벨 검정보다 선호되는 분석 방법, 경험적 분포를 통해 간접효과의 통계적 유의성 검정
+# install.packages('mediation')
 library(mediation)
-
-model.M <- lm(wt ~ disp, data=mtcars)
-model.Y <- lm(mpg ~ disp + wt, data=mtcars)
+model.M <- lm(wt ~ disp, data=mtcars) # 매개변수 모델
+model.Y <- lm(mpg ~ disp + wt, data=mtcars) # 종속변수 모델
 set.seed(123)
 model.mediation <- mediate(model.m=model.M,
                            model.y=model.Y,
                            treat='disp',
                            mediator='wt',
-                           boot=T, sims=500)
+                           boot=T, sims=500) # sims: 추출할 표본의 수(default=1000)
+
+# Total Effect: 총효과
+# ADE: 직접효과(종속변수에 대한 독립변수의 영향력)
+# ACME: 간접효과(매개효과, 총효과-직접효과)
+# 결과1: 간접효과의 p-value=0.004이므로 매개효과는 존재한다.
+# 결과2: 총효과가 직접효과보다 크기가 작아진 것으로 보아 무게는 배기량과 연비 간에 관계를 부분매개한다고 볼 수 있다.
+# if, 유의수준 0.01 이하의 조건을 적용하면 직접효과(ADE)는 사라지므로 무게는 배기량과 연비 간에 관계를 완전매개한다고 볼 수 있다. 
 summary(model.mediation)
 
 plot(model.mediation, cex=1.2, col='royalblue', lwd=2,
      main='Mediation Effect Analysis')
+
+# 조절효과분석----
+# 참고: https://www.youtube.com/watch?v=XBt0IS8a6Is
+str(mtcars)
+
+# 결과: mpg와 hp 간의 변화는 wt에 따라 달라진다.
+mtcars.lm <- lm(mpg ~ hp + wt + hp:wt, data=mtcars)
+summary(mtcars.lm)
+
+round(mean(mtcars$wt),1)
+round(sd(mtcars$wt), 1)
+
+# 상호작용효과 시각화1
+# 결과: wt가 증가함에 따라 hp과 mpg 간 관계가 점차 약해진다.(기울기 감소)
+library(effects)
+m <- round(mean(mtcars$wt),1)
+s <- round(sd(mtcars$wt), 1)
+m;s
+
+plot(effect(term="hp:wt", mod=mtcars.lm, 
+            xlevels=list(wt=c(m-s, m, m+s))),
+     lines=list(multiline=T, lwd=2,
+                lty=c(3, 2, 1), 
+                col=c('royalblue', 'violet', 'maroon')),
+     main='Interaction Plot for Horsepower and Weight')
+
+# 상호작용효과 시각화2
+# install.packages('rockchalk')
+library(rockchalk)
+plotSlopes(model=mtcars.lm, plotx='hp', modx='wt',
+           modxVals = 'std.dev.', col=rainbow(3), # modxVals: 일정하게 유지할 조절변수 값 지정
+           main='Interaction Plot for Horsepower and Weight')
+
+# 조절매개효과모델----
+# 참고: https://www.youtube.com/watch?v=wQm6n18Nmxs&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=30
+# 매개 변수에 의해 매개된 두 변수(독립변수와 종속변수) 간 직접적 또는 간접적 영향관계에 제4의 변수(조절변수)가 영향을 미치는지 검정
+# 조절효과는 매개효과모델의 모든 경로에서 발생 가능
+
+str(mtcars)
+model.M <- lm(wt ~ disp * am, data=mtcars) # 매개변수모델
+# model.M <- lm(wt ~ disp + am + disp:am, data=mtcars)
+model.Y <- lm(mpg ~ disp * am + wt * am, data=mtcars) # 종속변수모델
+# model.Y <- lm(mpg ~ disp + am + disp:am + wt + wt:am, data=mtcars)
+
+# 조절변수에 따른 독립변수, 매개변수, 종속변수 간의 영향관계 파악
+# 결과1: 수동변속기가 자동변속기보다 간접효과가 더 크고, 통계적으로 유의하다.
+# 결과2: 하지만 변속기의 간접효과의 차이는 통계적으로 검증된 것은 아니다.
+library(mediation)
+set.seed(12)
+model.med1 <- mediate(model.m=model.M, # 매개변수모델
+                     model.y=model.Y, # 종속변수모델
+                     covariates=list(am=0), # 조절변수의 수준 지정(0, 자동 변속기)
+                     treat = 'disp', # 독립변수
+                     mediator='wt', # 매개변수
+                     boot=T, sims=500)
+summary(model.med1)
+
+set.seed(12)
+model.med2 <- mediate(model.m=model.M, # 매개변수모델
+                      model.y=model.Y, # 종속변수모델
+                      covariates=list(am=1), # 조절변수의 수준 지정(1, 수동 변속기)
+                      treat = 'disp', # 독립변수
+                      mediator='wt', # 매개변수
+                      boot=T, sims=500)
+summary(model.med2)
+
+# 상호작용항이 포함된 매개변수모델과 종속변수모델을 이용해 매개효과분석 수행
+set.seed(12)
+model.med <- mediate(model.m = model.M,
+                     model.y = model.Y,
+                     treat = 'disp', mediator = 'wt',
+                     boot = T, sims=500)
+
+# 매개효과모델에서의 조절 효과 검증
+# 결과1: 간접효과의 차이 검정 결과,disp가 wt를 경유해서 mpg에 미치는 간접효과의 차이 검정: p-value = 0.044
+# disp가 wt를 매개로 mpg에 미치는 영향은 am 유형에 따라 차이가 있다.
+# 결과2: 직접효과의 차이 검정 결과, disp가 mpg에 미치는 직접효과의 차이 검정: p-value = 0.98
+# am 유형에 따른 직접효과의 차이가 없다.
+set.seed(12)
+test.modmed(object = model.med, 
+           covariates.1 = list(am=0), covariates.2 = list(am=1),
+           sims=500)
