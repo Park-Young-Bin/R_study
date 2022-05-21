@@ -136,7 +136,7 @@ boxplot(count ~ spray, data=InsectSprays, col='tomato',
         xlab='Type of Spray', ylab='Inspect Count',
         main = 'Performance of Insect Sprays')
 
-# one-way anova test
+# one-way anova test(aov 함수는 항상 등분산을 가정함)
 spray.aov <- aov(count ~ spray, data=InsectSprays)
 summary(spray.aov) # H0기각
 
@@ -162,9 +162,8 @@ tuk.hsd <- glht(model=spray.aov, linfct=mcp(spray='Tukey'))
 cld(tuk.hsd, level=0.05) # 같은 문자를 공유하는 살충제는 서로 평균이 다르지 않음을 나타냄
 plot(cld(tuk.hsd, level=0.05), col='orange', las=1) # 장점: 사후 분석1의 그래프보다 범주 개수가 많을 때 사용하면 좋고, 범주별로 종속변수의 분포 확인 가능
 
-# 분산분석 가정(정규성, 등분산성)----
+# 분산분석 가정(정규성, 등분산성)
 # 반드시 충족해야하는 것은 아니지만 신뢰할 수 있는 분산분석 결과를 얻을 수 있음
-
 library(car)
 qqPlot(InsectSprays$count, id=F, pch=20, col='deepskyblue', # id=F: 이상치 표시 안 함
        xlab='Theoretical Quantiles', ylab='Empirical Quantiles',
@@ -174,16 +173,16 @@ shapiro.test(InsectSprays$count) # 정규성 충족 불가, 하지만 분산분�
 # 관측값이 작고, 비정상적 관측값이 있으면 평균과 분산에 큰 영향을 줄 수 있으므로 제거하고 분산분석하는 것이 좋음
 
 # 이상점 존재 여부 확인
-outlierTest(spray.aov) # Bonferroni p(0.8499)이 0.05보다 크므로 이상점이 존재하지 않음
+outlierTest(spray.aov) # Bonferroni p-value = 0.8499이고 0.05보다 크므로 이상점이 존재하지 않음
 
 # 집단 간 분산의 동일성 여부(levene 검정 or bartlett 검정)
 leveneTest(count ~ spray, data=InsectSprays) # 등분산 가정 미충족
 bartlett.test(count ~ spray, data=InsectSprays) # 등분산 가정 미충족
 
-# 등분산 가정 미충족시 분산분석----
+# 등분산 가정 미충족시 분산분석(oneway.test 사용, oneway.test 함수는 다중 비교 불가능)
 # 등분산을 만족하는지에 따라 F값과 자유도가 달라짐
 # 등분산 가정이 만족하면 보다 적극적으로 H0을 기각하는 검정 결과를 얻을 수 있음
-oneway.test(count ~ spray, data = InsectSprays) # H0 기각 → 다중비교 불가
+oneway.test(count ~ spray, data = InsectSprays) # H0 기각
 summary(aov(count ~ spray, data = InsectSprays)) # 위의 결과와 동일
 
 oneway.test(count ~ spray, data = InsectSprays, var.equal = T) # 등분산 가정 조건 삽입
@@ -319,12 +318,12 @@ library(car)
 leveneTest(ptsd ~ csa, data=sexab) # p-value = 0.6599 → 등분산성 만족
 bartlett.test(ptsd ~ csa, data=sexab) # p-value = 0.8919 → 등분산성 만족
 
-# one-way anova(공변량을 보정하지 않음)
+# 1) one-way anova(공변량을 보정하지 않음)
 # 결론: 아동기 성폭력 경험 여부에 따라 성인의 ptsd에 영향을 미친다.
 sexab.aov <- aov(ptsd ~ csa, data=sexab)
 summary(sexab.aov)
 
-# ancova test
+# 2) ancova test
 # 순수한 영향력을 파악하기 위해 'cpa(아동기 신체적 학대)'를 고려해야 함
 # 결론1: cpa는 ptsd 관련 있음 
 # 결론2: cpa를 통제한 후에도 csa에 따라 ptsd에 영향을 미침
@@ -338,9 +337,10 @@ library(effects)
 effect("csa", sexab.aov)
 tapply(sexab$ptsd, sexab$csa, mean) # 비교 → 약간 차이 존재
 
-# 공분산 결과 visualization
+# 3) 공분산 결과 visualization
 # 기울기 같은 이유: csa가 ptsd에 미치는 영향이 두 집단에서 일정하도록 공변량을 통제했기 때문
-# 결과: 아동기 성폭력 경험 집단이 그렇지 않은 집단보다 더 큰 ptsd를 겪음
+# 결과1: 아동기 신체적 학대 경험이 증가할수록 ptsd 증가
+# 결과2: 아동기 성폭력 경험 집단이 그렇지 않은 집단보다 더 큰 ptsd를 겪음
 # cf. 본 분석은 독립변수(csa)가 2개 레벨로 이루어져 있기에 사후분석 필요 없음
 library(HH)
 windiws(width=12, height=8)
@@ -369,12 +369,12 @@ library(car)
 leveneTest(salary ~ rank, data=Salaries) # p-value = 4.477e-16 → 등분산성 불만족
 bartlett.test(salary ~ rank, data=Salaries) # p-value < 2.2e-16 → 등분산성 불만족
 
-# one-way anova(공변량을 보정하지 않음)
+# 1) one-way anova(공변량을 보정하지 않음)
 # 결론: 직급에 따라 연봉에 차이가 있다.
 Salaries.1aov <- aov(salary ~ rank, data=Salaries)
 summary(Salaries.1aov)
 
-# ancova test
+# 2) ancova test
 # 결론1: 재직기간에 따라 salary에 차이가 있다.
 # 결론2: 재직기간을 통제한 후에도 rank에 따라 salary에 영향을 미침
 Salaries.aov <- aov(salary ~ yrs.service + rank, data=Salaries)
@@ -388,7 +388,7 @@ effect("rank", Salaries.aov)
 tapply(Salaries$salary, Salaries$rank, mean) # 비교 → 약간 차이 존재
 
 # 사후 검정
-# TukeyHSD() 함수나 multcomp 패키지의 glht() 함수 사용. 
+# TukeyHSD() 함수 or multcomp 패키지의 glht() 함수 사용 
 # 두 방법은 다중비교 방식이나 유의확률(p-value)을 산출하는 방식이 다르기 때문에 결과가 상이할 수 있음. 
 # glht() 함수를 이용한 사후분석은 TukeyHSD() 함수에 비해 덜 엄격한 가정을 필요로 하고 적용할 수 있는 모델의 범위가 더 넓음.
 
@@ -396,7 +396,7 @@ library(multcomp)
 posthoc <- glht(model = Salaries.aov, linfct = mcp(rank='Tukey'))
 summary(posthoc)
 
-# 공분산 결과 visualization
+# 3) 공분산 결과 visualization
 # 기울기 같은 이유: csa가 ptsd에 미치는 영향이 두 집단에서 일정하도록 공변량을 통제했기 때문
 # 결과: 아동기 성폭력 경험 집단이 그렇지 않은 집단보다 더 큰 ptsd를 겪음
 # cf. 본 분석은 독립변수(csa)가 2개 레벨로 이루어져 있기에 사후분석 필요 없음
@@ -448,6 +448,16 @@ interaction2wt(uptake ~ Type*conc, data=CO2sub)
 with(CO2sub, pairwise.t.test(uptake, conc, paired=T, p.adjust.method="bonferroni"))
 with(CO2sub, pairwise.t.test(uptake, Type, paired=T, p.adjust.method="bonferroni"))
 
+# 구형성 가정을 적용한 RM ANOVA----
+# H0:  측정값 간 차이의 분산/공분산이 동일하다.
+# install.packages('rstatix')
+library(rstatix)
+ToothGrowth$id <- rep(1:10, 6)
+aov <- anova_test(data=ToothGrowth, dv=len, wid=id, between=supp, within=dose)
+
+# $`Mauchly's Test for Sphericity`에서 p-value=0.908이므로 구형성 만족
+aov
+
 # 반복측정 일원분산분석 예제----
 # 참고: https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=crow83&logNo=221503065741
 
@@ -476,7 +486,7 @@ ggplot(data = d.m, aes(x = time, y = value))+
 # 평균치 변화
 library(dplyr)
 ds <- d.m %>% group_by(time) %>% summarise(mean = mean(value), sd=sd(value))
-ggplot(ds,aes(x=time,y=mean))+
+ggplot(ds,aes(x=time, y=mean))+
         geom_point()+
         geom_line(group=1)
 
@@ -521,12 +531,12 @@ with(m, pairwise.t.test(value, time, paired=T, p.adjust.method = 'bonferroni'))
 # MANOVA(다변량 분산분석)----
 # 참고1: https://www.youtube.com/watch?v=ovNU9MzKTW0&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=16
 # 참고2: https://m.blog.naver.com/bsj104/221716847881
-
 # 두 개 이상의 종속변수가 있을 경우 집단별 차이를 동시에 검정, 연구 타당성 증대
 
 # install.packages('heplots')
 library(heplots)
 str(Skulls) # 인간의 두개골 크기 측정 자료
+head(Skulls)
 # epoch(독립변수): 이집트 시대를 5 범주로 구분
 # mb(종속변수): 두개골 폭
 # bh(종속변수): 두개골 높이
@@ -582,16 +592,13 @@ detach(Skulls) # 데이터를 R 검색 경로에서 제거
 # 독립성 검정: 두 범주형 변수 간의 관련성이 모집단에서 존재하는지 검정
 # 적합성 검정: 범주별 빈도를 바탕으로 모집단에서 기대되는 비율 분포가 존재하는지 검정
 
-# 예제
-# 안전벨트 착용과 승객 안전 간의 관계 파악
+# ex. 안전벨트 착용과 승객 안전 간의 관계 파악
 survivors <- matrix(c(1443, 151, 47, 1781, 312, 135), ncol=2)
-dimnames(survivors) <- list(Status=c('minor injury', 'major injury', 'dead'),
-                            Seatbelts =c('With seatbelt', 'Without seatbelt')) # 범주명 지정
+dimnames(survivors) <- list(Status=c('minor injury', 'major injury', 'dead'), # 행 이름
+                            Seatbelts =c('With seatbelt', 'Without seatbelt')) # 열 이름
 survivors
-addmargins(survivors) # 행, 열의 합을 교차표에 추가
-
-addmargins(survivors, 2)
-
+addmargins(survivors) # 행, 열 합계
+addmargins(survivors, 2) # 열 합계
 prop.table(addmargins(survivors, 2), 2) # 열의 합이 100%인 비율 교차표 생성
 
 # 인사이트: 안전벨트 착용은 승객의 안전과 관계가 있다.
@@ -609,12 +616,11 @@ barplot(survivors.prop*100, las =1,
         col=c('yellowgreen', 'lightsalmon', 'orangered'),
         ylab='Percent', main='Percent of Survivors') # 퍼센트로 수정한 그래프
 
-# 카이제곱 검정----
+# 카이제곱 검정
 # 기대빈도와 관측빈도의 비교를 통해 계산되는 '카이제곱'을 가설검정을 위한 검정통계량으로 사용
 # 관측빈도: 교차표 상의 실제 빈도
 # 기대빈도: 변수 간 서로 관련성이 없을 때(H0이 사실이라는 가정 下) 기대할 수 있는 예상 빈도
-# (관측빈도-기대빈도)의 차이가 작을수록 H0채택 확률 높음
-# 카이제곱 값이 클수록 H0기각할 가능성 높음
+# (관측빈도-기대빈도)의 차이가 작을수록 H0채택 확률 높음, 카이제곱 값이 클수록 H0기각할 가능성 높음
 
 # 1) pchisq()
 pchisq(45.91, df=(3-1)*(2-1), lower.tail = F) # 1.073421e-10 → H0기각
@@ -630,8 +636,8 @@ str(Titanic)
 Titanic.margin <- margin.table(Titanic, c(4, 1)) # c(생존여부, 승객구분)
 Titanic.margin
 
-addmargins(Titanic.margin)
-addmargins(Titanic.margin, 2)
+addmargins(Titanic.margin) # 행, 열 합계
+addmargins(Titanic.margin, 2) # 열 합계
 prop.table(addmargins(Titanic.margin, 2), 2)
 addmargins(prop.table(addmargins(Titanic.margin, 2), 2), 1)
 
@@ -661,7 +667,7 @@ crsstb <- table(survey$Fold, survey$Sex)
 crsstb
 chisq.test(crsstb) # H0 기각 못함
 
-# 적합성 검정---
+# 적합성 검정----
 # 관측한 빈도를 토대로 모집단에서의 집단별 비율 분포 검정
 
 # 예제: 세 이동통신사의 올해 시장점유율은 동일한가?
@@ -1004,7 +1010,7 @@ vif(mtcars.lm) # 10 초과하는 값 없음
 # 선형성, 정규성, 등분산성 가정 미충족 → 변수 변환
 ## 선형성의 가정을 위배하면 독립변수를 변환
 ## 정규성/등분산의 가정을 위배하면 종속변수를 변환
-# 다중공선성 → 변수 제거(주 목적이 예측을 위한 것이면 큰 신경X, 개별 예측 변수에 대한 통계적 해석이 목적이면 해결해야 함)
+# 다중공선성 → 변수 제거(주목적이 예측을 위한 것이면 큰 신경X, 개별 예측 변수에 대한 통계적 해석이 목적이면 해결해야 함)
 
 # mpg의 정규화를 위한 종속변수의 람다 추정
 # powerTransform(): x^(람다)를 최대한 정규분포에 가깝도록 만드는 람다 추정
@@ -1088,7 +1094,7 @@ contrasts(InsectSprays$spray) # 더미변수 코딩 구조 확인
 
 # 살충제 간에 효과 차이 검정(분산분석, 사후 검정)
 sprays.aov <- aov(count ~ spray, data=InsectSprays)
-summary(sprays.aov)
+summary(sprays.aov) # H0 기각
 TukeyHSD(sprays.aov)
 
 # 기준범주 변경
@@ -1149,11 +1155,11 @@ model.mediation <- mediate(model.m=model.M,
                            mediator='wt',
                            boot=T, sims=500) # sims: 추출할 표본의 수(default=1000)
 
-# Total Effect: 총효과
+# Total Effect: 총효과(독립변수가 종속변수에 미치는 영향력)
 # ADE: 직접효과(종속변수에 대한 독립변수의 영향력)
 # ACME: 간접효과(매개효과, 총효과-직접효과)
 # 결과1: 간접효과의 p-value=0.004이므로 매개효과는 존재한다.
-# 결과2: 총효과가 직접효과보다 크기가 작아진 것으로 보아 무게는 배기량과 연비 간에 관계를 부분매개한다고 볼 수 있다.
+# 결과2: |직접효과계수|가 |총효과계수|보다 작은 것으로 보아 무게는 배기량과 연비 간에 관계를 부분매개한다고 볼 수 있다.
 # if, 유의수준 0.01 이하의 조건을 적용하면 직접효과(ADE)는 사라지므로 무게는 배기량과 연비 간에 관계를 완전매개한다고 볼 수 있다. 
 summary(model.mediation)
 
@@ -1233,7 +1239,7 @@ model.med <- mediate(model.m = model.M,
                      boot = T, sims=500)
 
 # 매개효과모델에서의 조절 효과 검증
-# 결과1: 간접효과의 차이 검정 결과,disp가 wt를 경유해서 mpg에 미치는 간접효과의 차이 검정: p-value = 0.044
+# 결과1: 간접효과의 차이 검정 결과, disp가 wt를 경유해서 mpg에 미치는 간접효과의 차이 검정: p-value = 0.044
 # disp가 wt를 매개로 mpg에 미치는 영향은 am 유형에 따라 차이가 있다.
 # 결과2: 직접효과의 차이 검정 결과, disp가 mpg에 미치는 직접효과의 차이 검정: p-value = 0.98
 # am 유형에 따른 직접효과의 차이가 없다.
