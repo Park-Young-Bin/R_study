@@ -1247,3 +1247,262 @@ set.seed(12)
 test.modmed(object = model.med, 
            covariates.1 = list(am=0), covariates.2 = list(am=1),
            sims=500)
+
+# 일반선형모델----
+# 선형회귀분석에서 결과변수는 연속형 변수이면서 정규분포를 따라야함.
+# 하지만 대부분의 문제에서는 결과변수가 범주형일 수 있고, 횟수일 수도 있기에, 이러한 변수는 정규분포를 따르지 않음
+# 선형회귀모델을 확장하여 정규분포를 따르지 않는 결과변수를 수용할 수 있는 회귀모델 생성 필요
+# ex. 로지스틱회귀모델, 포아송회귀모델, ...  
+
+# 이항로지스틱 회귀분석(binomial logistic regression analysis)----
+# 참고: https://www.youtube.com/watch?v=nyU96C2-LCI&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=33
+# 종속변수가 이분형 범주를 가질 때 독립변수로부터 결과변수의 범주를 예측
+# 특정  사건이 발생할 확률을 직접 추정
+## 종속변수의 예측값은 항상 0과 1 사이의 확률
+## 이 값이 기준값(예를 들면 0.5)보다 크면 사건이 발생하고 기준값보다 작으면 사건이 발생하지 않는 것으로 예측
+# install.packages('modeldata')
+library(modeldata)
+data(mlc_churn)
+str(mlc_churn)
+
+churn <- mlc_churn
+churn <- churn[-c(1, 3)]
+churn$churn <- factor(ifelse(churn$churn=='no', 1, 2), # 고객 미이탈 = 1, 고객 이탈 = 2
+                      level=c(1, 2),
+                      labels=c('no', 'yes')) # 사건 발생 = "고객 이탈"
+str(churn)
+dim(churn)
+
+# train, test data split
+churn.train <- churn[1:3333, ]
+churn.test <- churn[3334:5000, ]
+
+# train, test data의 종속변수(churn) 비율 확인
+table(churn.train$churn) # no: 2850, yes: 483
+prop.table(table(churn.train$churn)) # no: 0.8550855, yes:0.1449145
+
+table(churn.test$churn) # no: 1443, yes: 224
+prop.table(table(churn.test$churn)) # no: 0.8656269, yes:0.1343731
+
+# binomial logistic regression analysis
+# 고객 미이탈(1)은 사건 미발생으로 0으로 변환되고, 고객 이탈(2)은 사건 발생으로서 1로 변환된다.
+# 따라서 본 분석의 오즈는 고객 이탈일 확률이 미이탈의 확률의 몇배인지를 나타낸다.
+# 로지스틱 회귀모델에서 독립변수 회귀계수는 다른 변수의 변화가 없다는 가정 하에서 해당 변수가 한 단위 만큼 변화할 때의 로그 오즈의 변화량을 나타냄
+# 회귀계수(+): 독립변수 증가 → 종속변수(로그 오즈) 증가, 회귀계수(-): 독립변수 증가 → 종속변수(로그 오즈) 감소
+# 로지스틱 회귀모델에 지수함수를 취하여 종속변수를 오즈로 변환 → 한 단위의 증가에 따른 오즈비 확인 가능
+churn.logit <- glm(churn ~ ., data = churn.train, family = binomial(link='logit'))
+summary(churn.logit)
+
+# exp(회귀계수) 해석
+# 해석1: international_plan은 yes일 때, no일 때보다 고객 이탈률이 미이탈률보다 7.7배 증가(770% 증가)
+# 해석2: voice_mail_plan은 yes일 때, no일 때보다 고객 이탈률이 미이탈률보다 0.13배 증가(87.8% 감소)
+# 해석3: total_day_charge가 한 단계 증가하면 고객 이탈률이 미이탈률보다 4.53배 증가
+# 해석3_1: 두 단계 증가하면 고객 이탈률이 미이탈률보다 4.53^2(=20.521)배 증가
+exp(coef(churn.logit))
+
+# 통계적 유의성 검정
+# deviance(이탈도): 모델의 비적합도 정도, 작을수록 좋음
+# Null deviance: 상수항만 포함된 예측 모델
+# Residual deviance: 예측변수가 모두 포함된 (현재 구축한)모델
+# 상수항만 포함된 모델보다 예측변수가 포함된 모델의 이탈도가 낮은 것 당연, 작아지는 정도가 통계적으로 의미있는지 중요함
+# Null 모델에 비해 개선되는 이탈도가 통계적으로 의미있는 차이인지 검정 필요
+# 자유도 차이만큼 Residual deviance가 개선됐는지 검정 → 카이제곱 검정
+pchisq(q=2758.3-2158.7, df = 3332-3315, lower.tail = F) # p-value = 1.731898e-116 → 이탈도 차이는 통계적으로 유의함
+pchisq(q=churn.logit$null.deviance - churn.logit$deviance, 
+       df=churn.logit$df.null - churn.logit$df.residual,
+       lower.tail = F) # 위와 동일, p-value = 1.757917e-116 → 이탈도 차이는 통계적으로 유의함
+
+churn.logit.pred <- predict(churn.logit, newdata=churn.test, 
+                            type='response') # 사건 발생 확률 출력
+head(churn.logit.pred)
+
+churn.logit.pred <- factor(churn.logit.pred > 0.5, 
+                           levels=c(FALSE, TRUE),
+                           labels=c('no', 'yes')) # 0.5 이상이면 고객 이탈
+head(churn.logit.pred)
+table(churn.logit.pred) # 고객 이탈: 72명, 고객 미이탈: 1595명
+
+# 혼동행렬
+table(churn.test$churn, churn.logit.pred,
+      dnn=c('Actual', 'Predicted'))
+mean(churn.test$churn == churn.logit.pred) # 정확도: 0.8740252
+
+# 단계별 로지스틱 회귀분석
+churn.logit2 <- step(churn.logit)
+summary(churn.logit2)
+
+# 관심있는 특정 예측변수가 사건 발생 확률에 미치는 영향 파악
+# 예측변수의 변화하는 수준에 따라 사건 발생 확률의 변화 확인
+# ex. 고객의 서비스 센터 전화 횟수가 고객 이탈 확률에 미치는 영향에 관심 있다.
+## "다른 예측변수들을 일정하게 고정"하여 고객의 서비스 전화 횟수를 바꿔가면서 고객 이탈 확률 변화를 계산한다.
+table(churn.test$number_customer_service_calls) # 서비스 센터 전회 횟수 분포 → 0 ~ 7회
+testdata <- data.frame(number_customer_service_calls=c(0:7),
+                       international_plan="no", # 범주형: 가장 낮은 범주 유형값
+                       voice_mail_plan="no",
+                       number_vmail_messages=mean(churn.test$number_vmail_messages), # 연속형: 평균값
+                       total_day_charge=mean(churn.test$total_day_charge),
+                       total_eve_minutes=mean(churn.test$total_eve_minutes),
+                       total_night_charge=mean(churn.test$total_night_charge),
+                       total_intl_calls=mean(churn.test$total_intl_calls),
+                       total_intl_charge=mean(churn.test$total_intl_charge))
+head(testdata)
+testdata$prob <- predict(churn.logit2, newdata = testdata, type = 'response')
+testdata[c("number_customer_service_calls", 'prob')] # 전화 횟수 증가 → 이탈률 증가
+
+# 과산포 문제 검정
+# 종속변수의 실제 분산이 이항분포에서 기대되는 분산보다 더 클 때 발생
+# 검정의 표준오차를 왜곡시켜 회귀계수의 유의성 검정을 부정확하게 만드는 위험 존재
+# 이탈도와 자유도 간의 비율 확인, 1을 크게 상회하면 과산포 의심
+deviance(churn.logit2)/df.residual(churn.logit2) # 0.6505038, 과산포 없음
+
+# 통계 검정
+# H0: 과산포 비율이 1이다.
+fit.origin <- glm(churn ~ international_plan + 
+                    voice_mail_plan + 
+                    number_vmail_messages + 
+                    total_day_charge + 
+                    total_eve_minutes + 
+                    total_night_charge + 
+                    total_intl_calls + 
+                    total_intl_charge +
+                    number_customer_service_calls,
+                  family = binomial(),
+                  data=churn.train)
+
+fit.overids <- glm(churn ~ international_plan + 
+                    voice_mail_plan + 
+                    number_vmail_messages + 
+                    total_day_charge + 
+                    total_eve_minutes + 
+                    total_night_charge + 
+                    total_intl_calls + 
+                    total_intl_charge +
+                    number_customer_service_calls,
+                  family = quasibinomial(),
+                  data=churn.train)
+
+pchisq(summary(fit.overids)$dispersion * fit.origin$df.residual,
+       fit.origin$df.residual, lower.tail = F) # 0.08385493 → 과산포 가능성 적음
+
+# 다항 로지스틱 회귀분석----
+# 참고: https://www.youtube.com/watch?v=4ibxb0OpgWA
+# 독립변수로부터 세 개 이상의 사건(범주)을 갖는 종속변수의 사건발생확률 예측
+# 사건발생확률은 새로운 케이스의 소속범주를 예측하는 데 활용
+# g개의 범주가 있을 때 총(g-1)개의 다항 로지스틱 회귀모델이 생성되며, 각 범주당 하나씩 기준 범주에 대한 로그오즈(로짓)를 설명하는 회귀모델로 정의
+
+library(EffectStars)
+data(PID) # 미국의 유권자 944명의 정치 성향 데이터
+str(PID)
+levels(PID$PID)
+
+library(VGAM)
+pid.mlogit <- vglm(PID ~ ., family = multinomial(), data = PID)
+
+# 결과1: 종속변수의 범주가 3개이므로 총 2개 모델 생성
+# 결과2: 마지막 범주('Republican')가 기준 범주로 자동 지정
+# 결과3: Education 변수더미변수로 자동 변환됨(low가 기준변수로서 0으로, hight는 1로 코딩)
+summary(pid.mlogit)
+
+# exp(회귀계수) 해석
+# 해석1: TVnews(1)오즈비: 1.045 / 뉴스 시청일이 하루 늘어나면, Democrate일 가능성이 Republican일 가능성에 비해 4.5% 증가(1.045배 증가)
+# 해석2: Education(1)오즈비: 0.749 / 교육 수준 한 단위 증가(low → high)는 Democrate일 가능성을 Republican일 가능성 대비 25.1% 감소(0.749배 증가)
+# 해석3: 하지만 TVnews(1)과 Educationhigh(1)은 통계적으로 유의하지 않음
+# 해석4: Income(1) 오즈비: 0.9835 / 소득 한 단위를 증가시키면 Democrate일 가능성이 Republican일 가능성에 비해 1.6% 감소, 소득 변화는 Democrate일 가능성과 Republican일 가능성에 유의한 영향을 미침
+exp(coef(pid.mlogit))
+
+# 각 범주별 예측 확률 계산(케이스 별로 세 범주 중 분류될 확률 추정)
+pid.mlogit.pred <- fitted(pid.mlogit)
+head(pid.mlogit.pred)
+
+# 독립변수 수준에 따른 사건발생 확률 변화 
+# ex1. 교육수준이 정치 성향에 미치는 영향
+# 결과: 교육수준 증가로 Democrat일 확률 감소, Republican일 확률을 증가시키지만 교육수준은 통계적 유의X
+testdata <- data.frame(Education=c('low', 'high'), 
+                       TVnews=mean(PID$TVnews), # 평균값 고정
+                       Income=mean(PID$Income),
+                       Age=mean(PID$Age),
+                       Population=mean(PID$Population)) # 가상의 데이터 생성
+testdata
+pid.mlogit.pred <- predict(pid.mlogit, newdata=testdata, type='response')
+cbind(testdata, pid.mlogit.pred)
+
+# ex2. 소득이 정치 성향에 미치는 영향
+# 결과: 저소득층은 Democrat, 고소득층은 Republican로 예측될 확률이 높음, 소득과 정치성향은 밀첩한 관계가 있음
+testdata <- data.frame(Education=rep('low', 5), # 가장 낮음 범주로 고정
+                       TVnews=mean(PID$TVnews), # 평균값 고정
+                       Income=seq(20, 100, 20),
+                       Age=mean(PID$Age),
+                       Population=mean(PID$Population)) # 가상의 데이터 생성
+testdata
+pid.mlogit.pred <- predict(pid.mlogit, newdata=testdata, type='response')
+cbind(testdata, pid.mlogit.pred)
+
+# 다른 예제
+library(MASS)
+str(fgl) # 214개의 유리 성분 데이터
+levels(fgl$type)
+head(fgl)
+
+fgl.scaled <- cbind(scale(fgl[, 1:9]), fgl[10]) # 변수 스케일링
+head(fgl.scaled)
+
+# train, test data set
+set.seed(123)
+train <- sample(nrow(fgl), 0.7*nrow(fgl))
+fgl.train <- fgl.scaled[train,]
+fgl.test <- fgl.scaled[-train,]
+
+sum(table(fgl.train$type)) # 149
+table(fgl.train$type)
+sum(table(fgl.test$type)) # 65
+table(fgl.test$type)
+
+# 모델 생성
+library(nnet)
+fgl.mlogit <- multinom(type ~., data=fgl.train) # 기준 범주=첫 번째 범주(WinNF)
+summary(fgl.mlogit)
+
+# 회귀계수 유의성 검정
+z <- summary(fgl.mlogit)$coefficients / summary(fgl.mlogit)$standard.errors
+p <- (1-pnorm(abs(z), 0, 1))*2
+print(p, digits=3)
+
+# 새로운 데이터에 대한 예측 확률 추정
+fgl.mlogit.pred <- predict(fgl.mlogit, newdata=fgl.test, type='probs')
+head(fgl.mlogit.pred)
+cbind(round(fgl.mlogit.pred, 3), fgl.test['type'])
+
+# 테스트 데이터에 대한 예측 정확도
+max.col(fgl.mlogit.pred) # 가장 높은 예측 확률을 갖는 열 인덱스 반환
+fgl.mlogit.pred <- colnames(fgl.mlogit.pred)[max.col(fgl.mlogit.pred)] # 열 인덱스에 대응되는 열 이름 선택
+head(fgl.mlogit.pred)
+
+# 혼동 행렬
+table(fgl.test$type, 
+      fgl.mlogit.pred, 
+      dnn=c('Actual', 'Predicted'))
+table(fgl.test$type, 
+      factor(fgl.mlogit.pred, 
+             levels=c(fgl.test$type),
+             labels=c(fgl.test$type)),
+             dnn=c('Actual', 'Predicted')) # 위치 수정
+mean(fgl.test$type == fgl.mlogit.pred) # 예측 정확도: 0.6307692
+
+# 교차검증
+fgl.mlogit.cv <- numeric()
+for (i in 1:100) {
+  train <- sample(nrow(fgl), 0.7*nrow(fgl))
+  fgl.train <- fgl.scaled[train,]
+  fgl.test <- fgl.scaled[-train,]
+  fgl.mlogit <- multinom(type ~., data=fgl.train)
+  fgl.mlogit.pred <- predict(fgl.mlogit,
+                             newdata=fgl.test,
+                             type='probs')
+  fgl.mlogit.pred <- colnames(fgl.mlogit.pred)[max.col(fgl.mlogit.pred)]
+  fgl.mlogit.cv[i] <- mean(fgl.test$type == fgl.mlogit.pred)
+}
+
+fgl.mlogit.cv
+summary(fgl.mlogit.cv) # mean = 0.6077
+boxplot(fgl.mlogit.cv, horizontal=T,
+        col='tomato', xlab='Accuracy', main='Accuracy for Forensic Glass (100 samples)')
