@@ -5,7 +5,7 @@
 # 최소자승법에 의한 잔차(관측값-예측값)의 제곱합과 패널티항의 합이 최소가 되는 회귀계수를 추정
 
 # 1. 릿지(Ridge) 회귀분석
-# 모델에 설명력에 기여 못하는 독립변수의 회귀계수 크기를 0에 근접하도록 축소
+# 모델 설명력에 기여 못하는 독립변수의 회귀계수 크기를 0에 근접하도록 축소
 # L2-norm 패널티항으로 회귀모델에 패널티 부과 → 회귀계수 축소 
 # 패널티의 크기는 "람다"로 지정
 # "람다" 증가 → 패널티 영향 증가, 릿지 회귀모형의 회귀계수 감소
@@ -111,6 +111,7 @@ postResample(pred=Boston.pred2, obs=Boston.test$medv) # 성능 평가
 
 # elasticnet regression analysis----
 set.seed(123)
+?train
 Boston.cv <- train(form=medv ~ ., data=Boston.train, # train(): 교차검증 수행 함수
                    method = 'glmnet',
                    trControl = trainControl(method='cv', # k-묶음 교차검증 방법

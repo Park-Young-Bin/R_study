@@ -1286,7 +1286,7 @@ prop.table(table(churn.test$churn)) # no: 0.8656269, yes:0.1343731
 
 # binomial logistic regression analysis
 # 고객 미이탈(1)은 사건 미발생으로 0으로 변환되고, 고객 이탈(2)은 사건 발생으로서 1로 변환된다.
-# 따라서 본 분석의 오즈는 고객 이탈일 확률이 미이탈의 확률의 몇배인지를 나타낸다.
+# 따라서 본 분석의 오즈는 고객 이탈일 확률이 미이탈 확률의 몇배인지 나타낸다.
 # 로지스틱 회귀모델에서 독립변수 회귀계수는 다른 변수의 변화가 없다는 가정 하에서 해당 변수가 한 단위 만큼 변화할 때의 로그 오즈의 변화량을 나타냄
 # 회귀계수(+): 독립변수 증가 → 종속변수(로그 오즈) 증가, 회귀계수(-): 독립변수 증가 → 종속변수(로그 오즈) 감소
 # 로지스틱 회귀모델에 지수함수를 취하여 종속변수를 오즈로 변환 → 한 단위의 증가에 따른 오즈비 확인 가능
@@ -1331,10 +1331,10 @@ mean(churn.test$churn == churn.logit.pred) # 정확도: 0.8740252
 churn.logit2 <- step(churn.logit)
 summary(churn.logit2)
 
-# 관심있는 특정 예측변수가 사건 발생 확률에 미치는 영향 파악
-# 예측변수의 변화하는 수준에 따라 사건 발생 확률의 변화 확인
+# 관심있는 특정 독립변수가 사건 발생 확률에 미치는 영향 파악
+# 독립변수의 변화하는 수준에 따라 사건 발생 확률의 변화 확인
 # ex. 고객의 서비스 센터 전화 횟수가 고객 이탈 확률에 미치는 영향에 관심 있다.
-## "다른 예측변수들을 일정하게 고정"하여 고객의 서비스 전화 횟수를 바꿔가면서 고객 이탈 확률 변화를 계산한다.
+## "다른 예측변수들을 일정하게 고정"하고 고객의 서비스 전화 횟수를 바꿔가면서 고객 이탈 확률 변화를 계산
 table(churn.test$number_customer_service_calls) # 서비스 센터 전회 횟수 분포 → 0 ~ 7회
 testdata <- data.frame(number_customer_service_calls=c(0:7),
                        international_plan="no", # 범주형: 가장 낮은 범주 유형값
@@ -1400,7 +1400,7 @@ pid.mlogit <- vglm(PID ~ ., family = multinomial(), data = PID)
 
 # 결과1: 종속변수의 범주가 3개이므로 총 2개 모델 생성
 # 결과2: 마지막 범주('Republican')가 기준 범주로 자동 지정
-# 결과3: Education 변수더미변수로 자동 변환됨(low가 기준변수로서 0으로, hight는 1로 코딩)
+# 결과3: Education 변수는 더미변수로 자동 변환(low가 기준변수로서 0으로, hight는 1로 코딩)
 summary(pid.mlogit)
 
 # exp(회귀계수) 해석
@@ -1416,7 +1416,7 @@ head(pid.mlogit.pred)
 
 # 독립변수 수준에 따른 사건발생 확률 변화 
 # ex1. 교육수준이 정치 성향에 미치는 영향
-# 결과: 교육수준 증가로 Democrat일 확률 감소, Republican일 확률을 증가시키지만 교육수준은 통계적 유의X
+# 결과: Education 증가로 Democrat일 확률 감소, Republican일 확률이 증가하지만 Education은 통계적 유의X
 testdata <- data.frame(Education=c('low', 'high'), 
                        TVnews=mean(PID$TVnews), # 평균값 고정
                        Income=mean(PID$Income),
@@ -1466,6 +1466,9 @@ summary(fgl.mlogit)
 z <- summary(fgl.mlogit)$coefficients / summary(fgl.mlogit)$standard.errors
 p <- (1-pnorm(abs(z), 0, 1))*2
 print(p, digits=3)
+
+# exp(회귀계수)
+exp(coef(fgl.mlogit))
 
 # 새로운 데이터에 대한 예측 확률 추정
 fgl.mlogit.pred <- predict(fgl.mlogit, newdata=fgl.test, type='probs')
