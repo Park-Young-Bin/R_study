@@ -20,8 +20,8 @@ t.test(dat$SBP, mu = 150)
 # 2) 예시
 # 참고: https://blog.naver.com/PostView.naver?blogId=shoutjoy&logNo=221793939950&redirect=Dlog&widgetTypeCall=true&directAccess=false
 
-# 기말고사 성적은 24점보다 유의하게 높은가?
-# p-value = 0.1696이고, 유의수준 0.05보다 크므로 24점보다 높다고 할 수 없다.
+# ex. 기말고사 성적은 24점보다 유의하게 높은가?
+# 결과: p-value = 0.1696이고, 유의수준 0.05보다 크므로 24점보다 높다고 할 수 없다.
 final <- c(19, 22, 24, 24, 25, 25, 26, 26, 28, 32)
 t.test(final, alternative = 'greater', mu=24)
 
@@ -173,7 +173,7 @@ shapiro.test(InsectSprays$count) # 정규성 충족 불가, 하지만 분산분�
 # 관측값이 작고, 비정상적 관측값이 있으면 평균과 분산에 큰 영향을 줄 수 있으므로 제거하고 분산분석하는 것이 좋음
 
 # 이상점 존재 여부 확인
-outlierTest(spray.aov) # Bonferroni p-value = 0.8499이고 0.05보다 크므로 이상점이 존재하지 않음
+outlierTest(spray.aov) # Bonferroni p-value = 0.8499(>0.05)이므로 이상점이 존재하지 않음
 
 # 집단 간 분산의 동일성 여부(levene 검정 or bartlett 검정)
 leveneTest(count ~ spray, data=InsectSprays) # 등분산 가정 미충족

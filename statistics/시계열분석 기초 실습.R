@@ -80,6 +80,7 @@ co2 <- window(co2, start=c(1985, 1), end=c(1996, 12))
 co2
 
 # 가법모델을 바탕으로 추세/계절/불규칙 성분으로 분해
+# stl() 함수 사용
 co2.decomp <- stl(co2, s.window = 'periodic')
 # s.window: 계절 효과 추출을 위한 구간 범위 지정, 계절 요인이 시간 흐름에 따라 얼마나 빠르게 변화하도록 허용할지 결정
 # 작은 숫자 → 기간 계간 구간 짧음 → 빠르게 변하는 패턴 / 큰 숫자 → 기간 계간 구간 긺 → 느리게 변하는 패턴
@@ -93,8 +94,7 @@ co2.decomp
 # 결과3: 점진적으로 상승하는 추세
 # 결과4: 우측 막대는 변동폭 비교하기 위한 목적으로 사용됨, 길이는 다르지만 크기는 모두 같음(각 성분마다 y값이 다름), 불규칙성분의 막대가 가장 길지만 세 구성 성분 가운데 변동폭이 가장 작음을 의미
 plot(co2.decomp, col='darkcyan', col.range='skyblue',
-     lwd=2,
-     main='Decomposition of CO2 Concentration Time Series')
+     lwd=2, main='Decomposition of CO2 Concentration Time Series')
 
 co2.decomp$time.series # 각 관측값의 성분별 분해 결과 확인
 co2
@@ -144,6 +144,7 @@ lair.decomp$time.series # 각 관측값의 성분별 분해 결과 확인
 exp(lair.decomp$time.series) # 원래 값
 
 # 지수예측모델----
+# 참고: https://www.youtube.com/watch?v=38PuZyCsYUw&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=49
 # 1) 단순지수평활법
 LakeHuron # 1875~1972년, 매년 측정한 호수 수위 시계열 데이터
 
@@ -181,7 +182,7 @@ plot(elecsales, col='royalblue', lwd=2,
      main = 'Electricity Sales in South Australia')
 
 # 홀트지수평활법에 의한 예측 모델 생성
-# alpha, beta 값이 0에 가까움 → 예측할 때 과거 관측값을 우선하여 고려함
+# 결과: alpha, beta 값이 0에 가까움 → 예측할 때 과거 관측값을 우선하여 고려함
 elecsales.ets <- ets(elecsales, model='AAN') # 불규칙(가법), 추세(가법), 계절X
 elecsales.ets
 
@@ -242,3 +243,154 @@ plot(forecast(austourists.ets, 12), col='cornflowerblue', lwd=2,
      flty=1, shadecols = c('mistyrose', 'salmon'),
      xlab='Year', ylab='Total Visitor Nights',
      main = 'Forecast for International Tourists to Australia') 
+
+# ARIMA 예측모델: 정상성과 자기상관----
+# 시계열 데이터의 정상성(stationarity)을 가정
+# 정상성: 시계열 데이터의 특성이 시간의 흐름에 따라 변하지 않음을 의미
+# 정상 시계열은 장기적으로 예측 가능한 패턴을 갖지 않으며, 시계열 그래프는 일정한 변동폭(일정한 분산)을 가지며 대체로 수평에 가까운 패턴(일정한 평균)을 보임
+# 데이터가 정상성을 가진다는 의미는 평균과 분산이 안정화되어 있어서 분석하기 쉽다는 것을 의미
+# 추세나 계절 요인은 시간이 지나면서 관측값에 영향을 미치므로 추세 성분이나 계절 성분을 갖는 시계열은 비정상적
+# 불규칙 성분만으로 구성된 시계열은 정상적(어느 시점에서 관찰하든 관측값은 불규칙한 변동을 제외하면 동일한 모습)
+# 추세나 계절요인이 포함되어 있어서 데이터가 정상성을 갖지 않으면 그러한 복잡한 패턴을 모델링하여 분석하는 것이 어렵기 때문에 일반적으로 정상성을 갖도록 전처리 수행
+
+# 자기상관(Autocorrelation)
+# 정상 시계열은 어느 시계열 구간에서 관찰하든 평균과 분산이 일정하며, 또한 관측값 간의 공분산 일정
+# 이는 자기상관이 시간에 따라 변화하지 않는 것을 의미
+# 자기상관은 동일한 변수를 시점을 달리하여 관찰했을 때, 이 관측값들 사이의 상호 관련된 정도를 나타내는 척도
+
+# install.packages('fpp2')
+library(fpp2)
+head(goog200) # 200일 간 구글 주가 시계열 데이터
+plot(goog200, col='cornflowerblue', lwd=2,
+     xlab='Day', ylab='Dollars',
+     main='Google Stock Prices') # 비정상적 시계열
+
+# 정상성 평가(ACF도표)
+# 결과1: 자기상관이 크고 양수이며 천천히 감소하고 있으므로 비정상적임
+# 결과2: 자기상관 0에 대한 95% CI(파란 점선)에서 모든 자기상관이 이를 벗어나므로 모든 차수에서 0이 아닌 자기상관 존재
+library(forecast)
+Acf(goog200, main='Google Stock Prices')
+
+# "차분"을 통해 비정성 시계열 → 정상 시계열 변환
+ndiffs(goog200) # 1회 차분
+dgoog200 <- diff(goog200)
+head(dgoog200) # -0.317932 = (2번째 관측값 - 1번째 관측값), 4.793823 = (3번째 관측값 - 2번째 관측값)
+
+# 결과: # 대체로 일정한 평균을 갖는 정상 시계열로 변환됨
+plot(dgoog200, col='salmon', lwd=2,
+     xlab='Day', ylab='Dollars',
+     main='Google Stock Prices\nTransformed by Differencing')
+
+# 결과1: 시계열 데이터의 정상성 충족
+# 결과2: 모든 시차에서 95% CI을 넘어서지 않으므로 자기상관이 통계적으로 유의하게 0임
+# 결과3: 차분 과정을 거친 시계열 데이터는 관측값 간에 상관관계가 없는 정상 시계열임
+Acf(dgoog200, main='Google Stock Prices\nTransformed by Differencing')
+
+# 통계 검정으로 정상성 평가
+# 시각적 탐색과 통계적 검정을 통해 정상성을 판단한 후, 시계열 데이터가 비정상이면 정상 시계열로 변환해야 함
+# p < 0.05: 시계열 데이터는 정상성 만족
+library(tseries)
+adf.test(goog200) # 차분 전(원본) 데이터 / p-value = 0.6693이므로 비정상 시계열임
+adf.test(dgoog200) # 차분 후 데이터 / p-value = 0.01이므로 정상 시계열임
+
+# ARIMA예측모델: ARMA모델과 ARIMA모델----
+# 기본적으로 AR모델과 MA모델을 바탕으로 함
+# AR모델은 시계열상의 과거 관측값을 이용해 예측 모델 구축
+# MA모델은 과거 예측오차를 기반으로 예측 모델 구축
+
+# AR모델(자기 자신과의 회귀)
+# 예측하고자 하는 특정 변수의 과거 관측값의 선형결합으로 해당 변수의 미래값 예측
+# 과거 p개 관측값의 선형결합으로 예측하는 모델을 p차 AR모델이라고 하며 AR(p)로 표현
+
+# MA모델
+# 예측오차를 이용하여 미래값 예측
+# 과거 q개 예측오차의 선형결합으로 예측하는 모델을 q차 MA모델이라고 하며 MA(q)라고 표현
+
+# ARMA(p, q)모델
+# AR모델과 MA모델을 결합하여 ARMA(p, q)모델 도출
+# 시계열의 각 값을 과거 p개 관측값과 q개 오차를 이용하여 예측
+
+# ARIMA(p, d, q)모델
+# ARMA모델에 차분 추가
+# 시계열 데이터를 d회 차분하고 결과값은 과거 p개 관측값과 q개 오차에 의해 예측되는 모델
+# 결과값은 비차분화(차분한 값을 원래로 변환) 과정을 거쳐 최종 예측값으로 변환
+
+# ARIMA 모델링
+# 1) 시계열 데이터의 정상성 평가
+# 2) 예측모델 생성
+# 3) 예측모델 평가와 예측
+
+# 1. 시계열 데이터의 정상성 평가
+Nile
+
+# 결과1: 분산_전기간에 걸쳐 변동폭 크지 않음 → 로그 변환 불필요
+# 결과2: 약간의 하락추세 관측
+plot(Nile, col='darkviolet', lwd=2,
+     xlab = 'Year', ylab='Flow',
+     main='Flow of the River Nile') 
+
+library(tseries)
+adf.test(Nile) # 정상성 검정, p-value = 0.0642 → 정상성 미충족
+
+library(forecast)
+ndiffs(Nile) # 1회 차분
+
+dNile <- diff(Nile)
+plot(dNile, col='dodgerblue', lwd=2,
+     xlab = 'Year', ylab='Flow',
+     main='Flow of the River Nile: Differenced') # 추세 사라짐 → 정상성 확인
+
+adf.test(dNile) # 정상성 검정, p-value = 0.01 → 정상성 만족
+
+# 예측모델 생성
+# d는 이전 과정에서 정상성 충족을 위해 1회의 차분이 필요함을 파악
+# p, q는 일반적으로 ACF도표와 PACF도표를 바탕으로 결정함
+
+# 결과1: 자기상관은 시차1 이후에 0이 되고 편자기상관은 시차2 이후에 0이됨
+# 결과2: 자기상관과 편자기상관은 모두 점진적으로 0에 이르고 있음
+# 결과3: 모델 선택 가이드라인에 따르면 AR(2)/ARMA(2,0), MA(1)/ARMA(0,1), ARMA(2,1) 등의 모델 가능
+# + 비슷한 성능이면 가장 적은 개수의 파라미터를 갖는 MA(1)/ARMA(0,1)을 사용하는 것이 바람직함
+Acf(dNile, lwd=2,
+    main='Autocorrelation for the River Nile')
+Pacf(dNile, lwd=2,
+     main='Partial Autocorrelation for the River Nile')
+
+Nile.arima <- arima(Nile, order = c(0, 1, 1)) # 예측모델 생성
+Nile.arima
+accuracy(Nile.arima) # 성능파악
+
+# 예측모델 평가와 예측
+# 예측모델이 적절하다면 잔차는 정규분포를 따라야하며 모든 가능한 시차에 대해 자기상관이 0이어야 함(서로 독립)
+
+# 결과: 잔차들이 대체로 직선주변에 있으므로 잔차는 정규분포를 따른다고 할 수 있다.
+qqnorm(Nile.arima$residuals, pch=21, col='black',
+       bg='gold', main='Q-Q Plot of Residuals')
+qqline(Nile.arima$residuals, col = 'royalblue', lwd=2)
+
+Box.test(Nile.arima$residuals, type="Ljung-Box") # H0(자기상관 = 0)검정 / p-value = 0.2416 → H0 채택
+
+Nile.arima.pred <- forecast(Nile.arima, h = 5) # 향후 5년 예측
+Nile.arima.pred
+
+plot(Nile.arima.pred, col='darkgreen', lwd=2,
+     flty=1, flwd=3,
+     fcol='royalblue', shadecols = c('mistyrose', 'salmon'),
+     xlab='Year', ylab='Flow',
+     main='Forecast for flow of the River Nile')
+
+# 자동으로 최적의 예측 모델 생성
+# 이전 ARIMA 모델은 계절 요인을 고려하지 않았음
+# ARIMA(2,1,1)(0,1,1)[12] → (0,1,1) = 비계절부분의 (p,d,q) 파라미터, [12]: 연간 관측값 개수 의미
+gas
+gas.arima <- auto.arima(gas)
+gas.arima
+
+arima(gas, order=c(2, 1, 1), 
+      seasonal = list(order=c(0, 1, 1), period=12)) # 직접 명시하여 생성 가능, 위와 결과 동일
+
+forecast(gas.arima, h=5*12) # 향후 5년 예측
+plot(forecast(gas.arima, h=5*12), col='darkorange', lwd=2,
+     flty=1, flwd=3,
+     fcol='orangered', shadecols = c('lavender', 'skyblue'),
+     xlab='Year', ylab='Monthly Production',
+     main='Forecast for Australian Monthly Gas Production')
