@@ -334,8 +334,8 @@ summary(sexab.aov)
 # cpa 영향을 제거한 후에 조정된 ptsd 집단 평균 차이 파악
 # install.packages('effects')
 library(effects)
-effect("csa", sexab.aov)
-tapply(sexab$ptsd, sexab$csa, mean) # 비교 → 약간 차이 존재
+effect("csa", sexab.aov) # 11.544429(Abused),  5.271677(NotAbused)
+tapply(sexab$ptsd, sexab$csa, mean) # 11.941093(Abused),  4.695874(NotAbused) → 약간 차이 존재
 
 # 3) 공분산 결과 visualization
 # 기울기 같은 이유: csa가 ptsd에 미치는 영향이 두 집단에서 일정하도록 공변량을 통제했기 때문
