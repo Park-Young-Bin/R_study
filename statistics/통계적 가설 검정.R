@@ -571,12 +571,12 @@ by(y, epoch, cov)
 # 가정2: 다변량 정규성
 # install.packages('mvnormtest')
 library(mvnormtest)
-# 결과: 한 집단을 제외하고는 다변량정규성 불만족
-mshapiro.test(t(Skulls[1:30, 2:5]))
-mshapiro.test(t(Skulls[31:60, 2:5]))
-mshapiro.test(t(Skulls[61:90, 2:5]))
-mshapiro.test(t(Skulls[91:120, 2:5]))
-mshapiro.test(t(Skulls[121:150, 2:5]))
+# 결과: 한 집단을 제외하고는 다변량정규성 불만족(p>0.05이면 정규성 만족)
+mshapiro.test(t(Skulls[1:30, 2:5])) # p-value = 0.05
+mshapiro.test(t(Skulls[31:60, 2:5])) # p-value = 0.02
+mshapiro.test(t(Skulls[61:90, 2:5])) # p-value = 0.01
+mshapiro.test(t(Skulls[91:120, 2:5])) # p-value = 0.04
+mshapiro.test(t(Skulls[121:150, 2:5])) # p-value = 0.08
 
 # manova test
 Skulls.manova <- manova(y ~ epoch)
@@ -775,7 +775,7 @@ corrgram(state.x77, col.regions = cols, # pie chart 색 지정
 # 하나 이상의 다른 변수의 영향을 통제한 상태에서 관심의 대상인 두 변수 간의 선형적 관련성 측정
 # 가짜 상관을 찾아내는 데 활용(연봉과 혈압 ~ 나이)
 ## 일반적으로 연봉과 혈압은 양의 상관성, 이유는 두 변수가 제3의 변수인 나이와 관련 있기 때문 → 나이 통제 필요 → 나이의 영향을 일정하게 유지
-## 두 변수 간에 상관이 존재하듯 보이지만 두 변수가 진짜 상관을 갖은 제3의 변수와 상관을 갖기 때문에 발생하는 경우라면 두 변수는 가짜 상관이 발생할 수 있음
+## 두 변수 간에 상관이 존재하듯 보이지만 두 변수가 진짜 상관을 갖는 제3의 변수와 상관을 갖기 때문에 발생하는 경우라면 두 변수는 가짜 상관이 발생할 수 있음
 # 숨겨진 관계를 찾는 데 활용(구매필요성과 구매의향 ~ 소득)
 ## 변수 ㄱ, ㄴ이 상관을 갖지 않는다면, 제3의 변수 ㄷ이 ㄱ과 양의 상관, ㄴ은 ㄷ와 음의 상관을 갖고 있기 때문일 수 있음, 변수 ㄷ을 통해 양, 음의 상관관계가 상쇄되어 ㄱ, ㄴ 간에 상관이 드러나지 않았을 수 있음
 
@@ -795,7 +795,7 @@ pcor(c('mpg', 'hp', 'cyl', 'wt'), cov(mtcars2)) # 동일한 결과
 # 유의성 검정
 # 결과1: p-value = 0.1400152 → H0 채택
 # 결과2: cyl과 wt를 통제하면 mpg와 hp 간의 순수한 상관관계는 존재하지 않는다.
-# 결과3:두 변수 간의 상관관계(-0.7761684)는 상당 부분 cyl와 wt로 일어났음을 알 수 있다.
+# 결과3: 두 변수 간의 상관관계(-0.7761684)는 상당 부분 cyl와 wt로 일어났음을 알 수 있다.
 pcor.test(pcor(c(1, 3, 2, 4), cov(mtcars2)),
                q=2, # 통제할 변수 개수(cyl, wt)
                n=nrow(mtcars)) # 관측값 개수(표본 크기)
