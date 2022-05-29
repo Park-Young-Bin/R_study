@@ -842,12 +842,16 @@ par(mfrow = c(1,1))
 
 # + 잔차 정규성 검정
 res <-  residuals(Prestige.lm)
-shapiro.test(res) # p-value = 1.281e-08, H0기각, 정규성 만족하지 않음
+shapiro.test(res) # p-value = 1.281e-08, H0기각, 정규성 만족X
 
 # + 잔차 독립성 검정
 # install.packages('lmtest')
 library(lmtest)
-dwtest(Prestige.lm) # p-value = 0.00818, H0기각, 독립성 만족하지 않음
+dwtest(Prestige.lm) # p-value = 0.00818, H0기각, 독립성 만족X
+
+# + 잔차 등분산성 검정
+library(car)
+ncvTest(Prestige.lm) # p = 3.3359e-07, H0기각, 등분산성 만족X
 
 coef(summary(Prestige.lm)) # 회귀계수 유의성
 anova(Prestige.lm) # 회귀식 유의성
@@ -882,7 +886,6 @@ lm(income ~ education, data=Prestige,
 # 일반적으로 3차항을 초과하는 다항회귀모델은 흔하지 않음
 
 # ex. 교육기간과 소득 간 관계 파악
-
 library(car)
 str(Prestige)
 
@@ -958,6 +961,7 @@ faithful.lm <- lm(eruptions ~ waiting, data=faithful) # 단순
 summary(faithful.lm)
 
 # 다중회귀분석----
+# 참고: https://www.youtube.com/watch?v=yt5vkrrAoDI&t=1139s
 str(mtcars)
 mtcars <- mtcars[c('mpg','hp', 'wt', 'disp', 'drat')]
 head(mtcars)
@@ -984,7 +988,7 @@ summary(mtcars.lm)
 # devtools::install_github("cran/QuantPsyc")
 library(QuantPsyc)
 mtcars.lm <- lm(mpg ~ hp + wt + disp + drat, data=mtcars)
-lm.beta(mtcars.lm)
+lm.beta(mtcars.lm) # 영향력 순위: wt > hp > drat > disp
 
 # 회귀분석 가정----
 # 참고: https://www.youtube.com/watch?v=sbnq3xTC1Uk&list=PLY0OaF78qqGAxKX91WuRigHpwBU0C2SB_&index=25
@@ -999,7 +1003,10 @@ plot(mtcars.lm)
 # 선형성: 어떠한 패턴이 보이므로 선형성 만족 부족
 # 독립성: 일부 점들이 대각선을 벗어나므로 독립성 만족 부족
 # 등분산성: 수평 추세선이 관측되므로 등분산성 만족
-# 이상점/영향력: 
+# 이상점/영향력
+## 이상점: 회귀모델에 의해 설명되지 않는 관측값, 부호 상관없이 큰 관측값, y축에서 관측
+## 고Leverage: 예측 변수 관점에서의 이상점, 다른 관측값에 비해 예측값이 매우 상이한 관측값, x축에서 관측
+## 영향점: 회귀계수에 지나치게 큰 영향을 주는 관측값, 'cook 거리'를 이용해 식별, 일반적으로 |0.5~1| 사이 값을 지칭
 
 library(car)
 vif(mtcars.lm) # 10 초과하는 값 없음
@@ -1008,8 +1015,8 @@ vif(mtcars.lm) # 10 초과하는 값 없음
 # 관측값 제거, 변수 변환, 변수 추가/제거를 통해 회귀모델 수정
 # 이상점/영향점 → 관측값 제거
 # 선형성, 정규성, 등분산성 가정 미충족 → 변수 변환
-## 선형성의 가정을 위배하면 독립변수를 변환
-## 정규성/등분산의 가정을 위배하면 종속변수를 변환
+## 선형성의 가정 위배: 독립변수 변환
+## 정규성/등분산의 가정 위배: 종속변수 변환
 # 다중공선성 → 변수 제거(주목적이 예측을 위한 것이면 큰 신경X, 개별 예측 변수에 대한 통계적 해석이 목적이면 해결해야 함)
 
 # mpg의 정규화를 위한 종속변수의 람다 추정
@@ -1428,7 +1435,7 @@ cbind(testdata, pid.mlogit.pred)
 
 # ex2. 소득이 정치 성향에 미치는 영향
 # 결과: 저소득층은 Democrat, 고소득층은 Republican로 예측될 확률이 높음, 소득과 정치성향은 밀첩한 관계가 있음
-testdata <- data.frame(Education=rep('low', 5), # 가장 낮음 범주로 고정
+testdata <- data.frame(Education=rep('low', 5), # 가장 낮은 범주로 고정
                        TVnews=mean(PID$TVnews), # 평균값 고정
                        Income=seq(20, 100, 20),
                        Age=mean(PID$Age),
