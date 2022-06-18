@@ -1,4 +1,6 @@
 # R 기초 - 함수 function
+# 참고 영상: https://www.youtube.com/watch?v=qHLtn5xxyRU&list=PLY0OaF78qqGA42e0rXqBWCcF_C9Ib-T1x&index=34
+
 # 예제1----
 transLength <- function(x) {
   tlength <- round(x*.9144, digits=1)

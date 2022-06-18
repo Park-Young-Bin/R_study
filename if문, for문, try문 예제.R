@@ -7,7 +7,7 @@ if (grade >= 75) {
 }
 
 vec1 <- c(10, 20, 30)
-if (vec1 == 10) {
+if (vec1 == 10) { # if else 연산은 벡터 연산 지원X
   print('인사부')
 } else {
   print('총무부')
@@ -31,7 +31,7 @@ if (vec1 == 10) {
   print('총무부')
 }
 
-# for문----
+# for문---- %%
 for (i in 1:10) {
   print(i)
 }
@@ -61,6 +61,7 @@ for(i in 1:100) {
 }
 print(sum)
 
+i <- 0
 while (i <= 10) {
   print(i)
   i <- i + 1
@@ -126,7 +127,6 @@ f1 <- function(x) {
     cat("log(", x, ") = ", (log(x)))
   )
 }
-
 f1('x')
 
 # 예제2
