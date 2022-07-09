@@ -245,14 +245,14 @@ boxplot(len ~ supp * dose, data=ToothGrowth,
         xlab='Vitamin C Type', ylab='Tooth Growth',
         main='Effects of Vitamin C on Tooth Growth') # 서식 추가
 
-interaction.plot(x.factor = ToothGrowth$dose, # 상호작용 그래프(두 변수 간에 상호작용 파악)
-                 trace.factor = ToothGrowth$supp,
-                 response = ToothGrowth$len,
+interaction.plot(x.factor = ToothGrowth$dose, # x축(독립변수)
+                 trace.factor = ToothGrowth$supp, # 나머지 독립변수(그룹 역할)
+                 response = ToothGrowth$len, # y축(종속변수)
                  trace.label = 'Supplement',# 범례 제목
                  las=1, type='b', pch=c(1, 19),
                  col=c('blue', 'red'),
                  xlab='Dose Level', ylab='Tooth Length',
-                 main='Interaction Plot for Tooth Growth of Guinea Pigs') 
+                 main='Interaction Plot for Tooth Growth of Guinea Pigs') # 상호작용 그래프(두 변수 간 상호작용 파악)
 
 library(gplots)
 interaction(ToothGrowth$supp, ToothGrowth$dose, sep=" ") # 독립변수 간 조합쌍 생성
@@ -334,11 +334,11 @@ summary(sexab.aov)
 # cpa 영향을 제거한 후에 조정된 ptsd 집단 평균 차이 파악
 # install.packages('effects')
 library(effects)
-effect("csa", sexab.aov) # 11.544429(Abused),  5.271677(NotAbused)
-tapply(sexab$ptsd, sexab$csa, mean) # 11.941093(Abused),  4.695874(NotAbused) → 약간 차이 존재
+effect("csa", sexab.aov) # 11.544429(Abused),  5.271677(NotAbused) ← cpa 영향을 제거한 후의 ptsd 집단 평균
+tapply(sexab$ptsd, sexab$csa, mean) # cpa 영향을 제거하지 않은 상태, 11.941093(Abused),  4.695874(NotAbused) → 위의 결과와 약간 차이 존재
 
 # 3) 공분산 결과 visualization
-# 기울기 같은 이유: csa가 ptsd에 미치는 영향이 두 집단에서 일정하도록 공변량을 통제했기 때문
+# 기울기 같은 이유: csa가 ptsd에 미치는 영향을 두 집단에서 일정하도록 공변량을 통제했기 때문
 # 결과1: 아동기 신체적 학대 경험이 증가할수록 ptsd 증가
 # 결과2: 아동기 성폭력 경험 집단이 그렇지 않은 집단보다 더 큰 ptsd를 겪음
 # cf. 본 분석은 독립변수(csa)가 2개 레벨로 이루어져 있기에 사후분석 필요 없음
@@ -1516,3 +1516,98 @@ fgl.mlogit.cv
 summary(fgl.mlogit.cv) # mean = 0.6077
 boxplot(fgl.mlogit.cv, horizontal=T,
         col='tomato', xlab='Accuracy', main='Accuracy for Forensic Glass (100 samples)')
+
+# 포아송회귀분석----
+# 참고: https://www.youtube.com/watch?v=-Za5MrWUohg
+# 결과변수가 특정 기간 동안의 사건발생횟수(또는 개수)인 경우에 적용
+# 사건발생횟수 예측
+## 제한된 값을 가지며 음수X
+## 한 시간 동안 걸려오는 상담전화횟수, 하루동안 발생하는 범죄횟수, 한 달 동안 발생하는 교통사고횟수, 한 해 일어나는 지진건수 등
+
+# install.packages('robust')
+library(robust)
+data('breslow.dat') # 뇌전증 환자의 치료제 투약전 8주간 발작횟수와 투약 후 8주간 발작횟수
+str(breslow.dat)
+
+# Base(예측변수): 치료 전 8주간 발작횟수
+# sumY(결과변수): 치료 후 8주간 발작횟수
+# Age(예측변수): 환자 나이
+# Trt(예측변수): 치료제(2개 범주) (1: placebo, 2: progabide)
+seizure <- breslow.dat[c('Base', "Age", 'Trt', 'sumY')] 
+
+summary(seizure)
+
+# 해석1: 오른쪽으로 꼬리가 긴 분포이므로 결과변수가 정규분포를 따를 것을 요구하는 표준적인 선형회귀분석을 적용하기 어렵
+# 해석2: 결과변수가 정규분포에서 요구하는 형태를 따르지 않을 때, 일반 선형모델의 범주에 속하는 포아송회귀분석은 좋은 분석이 될 수 있음
+hist(seizure$sumY, breaks=20, col='cornflowerblue',
+     xlab='Seizure Count',
+     main = 'Distribution of Seizure') 
+
+# 모델 생성
+seizure.poisson <- glm(sumY ~ Base + Age + Trt, data=seizure, family=poisson)
+summary(seizure.poisson)
+
+# 회귀모델 유의성 검정
+pchisq(q=2122.73-559.44, df = 58-55, lower.tail = F) # p-value = 0 → 통계적으로 유의함
+
+# 해석1: 나이 1살 증가는 발작횟수를 1.023배 증가시킨다.(2.3% 증가)
+# 해석2: 치료제 유형 1단위 증가(위약 → 진약)는 발작횟수를 0.858배 증가시킨다.(14.2% 감소)
+exp(coef(seizure.poisson))
+
+# 과산포 검정
+# 결과변수의 실제 관측된 분산이 포아송분포에 의해 기대되는 분산보다 클 때 발생
+# 분산 대 평균 비율이 1보다 클 때 발생
+# 잔차 이탈도/잔차 자유도
+deviance(seizure.poisson) / df.residual(seizure.poisson) # 10.1717 → 과산포 의심
+
+# 과산포 통계적 유의성 검정
+# H0: 데이터는 과산포가 아니다.
+# install.packages('qcc')
+library(qcc)
+qcc.overdispersion.test(seizure$sumY, type='poisson') # p-value = 0이므로 과산포 문제를 갖고 있음
+
+# 과산포를 고려한 포아송회귀분석
+# 결과: 회귀계수는 같지만 표준오차는 이전보다 커짐 → Age, Trt 변수 유의하지 않음
+# 결과: 과거 발작횟수가 향후 발작횟수를 예측하는데 유의한 영향을 미침
+seizure.qpoisson <- glm(sumY ~ Base + Age + Trt, data=seizure, family=quasipoisson())
+summary(seizure.qpoisson)
+
+# 관측값의 시간 간격이 다른 경우
+# 각 관측값의 시간 간격이 다른 경우에 결과변수는 사건발생횟수를 단위 시간으로 나눈 사건발생률(event rate)이 됨: 즉 단위 시간당 발생횟수(사건발생률)가 분석 대상
+# 사건발생률을 분석하기 위해서는 각 관측값에 대해 얼마의 기간 동안 사건발생횟수를 측정했는지 나타내는 시간 변수가 포아송회귀모델에 포함되어야 함
+
+library(MASS)
+# type: 종류
+# year: 건조시점
+# period: 운행기간
+# service: 사용기간
+# incidents: 손상횟수
+str(ships) # 파도로 인한 선박의 손상횟수와 월단위로 측정된 사용기간
+
+# 선박의 손상횟수를 관측한 기간이 각 관측값마다 다르므로 사용기간 당 손상횟수를 결과변수를 한 포아송회귀모델 적용
+shipsinc <- subset(ships, service > 0) # 사용기간 0개월 제외
+shipsinc$year <- factor(shipsinc$year)
+shipsinc$period <- factor(shipsinc$period)
+levels(shipsinc$year) # 1960~1964 / 1965~1969 / 1970~1974 / 1975~1979
+levels(shipsinc$period) # # 1960~1974 / 1975~1979
+
+shipsinc.poisson <- glm(incidents ~ type + year + period, data=shipsinc,
+                        family=poisson(),
+                        offset=log(service)) # 시간 변수(선박 사용기간) 지정
+summary(shipsinc.poisson)
+
+# 회귀모델 유의성 검정
+pchisq(q=146.328-38.695, df = 33-25, lower.tail = F) # p-value = 1.166305e-19 → 통계적으로 유의함
+
+# 과산포 검정
+deviance(shipsinc.poisson) / df.residual(shipsinc.poisson) # 1.547802 > 1
+qcc.overdispersion.test(shipsinc$incidents, type='poisson') # p-value = 0이므로 과산포 문제를 갖고 있음
+
+# 과산포를 고려한 포아송회귀분석
+shipsinc.qpoisson <- update(shipsinc.poisson, family=quasipoisson())
+summary(shipsinc.qpoisson)
+
+# 해석1: E형 선박이 손상위험이 가장 높고 C형 선박은 가장 낮다. A형은 두번째로 높다.
+# 해석2: 건조시점이 1960~1964년인 선박(기준범주)이 가장 안전하고, 1970~1974년인 선박(year70)이 가장 손상에 취약하다, 건조시점이 1970~1974년인 선박은 1960~1964년인 선박(기준범주)에 비해 손상위험이 2.27배 더 높다.
+# 해석3: 1975~1979년 기간에 운행된 선박(period75)은 1960~1974년 기간에 운행된 선박(기준범주)에 비해 손상위험이 1.47배 더 높다.
+exp(coef(shipsinc.qpoisson))
